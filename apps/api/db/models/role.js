@@ -22,10 +22,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true
-      },
-      created_by: {
-        type: DataTypes.UUID,
-        allowNull: true
       }
     },
     {

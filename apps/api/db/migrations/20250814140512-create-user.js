@@ -18,16 +18,14 @@ module.exports = {
         unique: true,
         allowNull: false
       },
+      status: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+      },
       password: {
         type: Sequelize.STRING,
         allowNull: false
-      },
-      created_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: { model: 'users', key: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
       },
       role_id: {
         type: Sequelize.UUID,

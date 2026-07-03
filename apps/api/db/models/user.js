@@ -7,16 +7,6 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'role_id',
         as: 'role'
       })
-
-      User.belongsTo(models.User, {
-        foreignKey: 'created_by',
-        as: 'creator'
-      })
-
-      User.hasMany(models.User, {
-        foreignKey: 'created_by',
-        as: 'createdUsers'
-      })
     }
   }
 
@@ -36,7 +26,10 @@ module.exports = (sequelize, DataTypes) => {
       },
       password: DataTypes.STRING,
       role_id: DataTypes.UUID,
-      created_by: DataTypes.UUID,
+      status: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+      },
       avatar: DataTypes.STRING(255),
       last_updated_password: DataTypes.DATE,
       last_activity: DataTypes.DATE
