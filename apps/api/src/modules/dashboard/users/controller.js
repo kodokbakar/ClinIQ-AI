@@ -47,12 +47,12 @@ class Controller {
         u.name,
         u.email,
         r.name as role,
-        u.is_active,
+        u.status
         FROM users u
         JOIN roles r ON u.role_id = r.id
         WHERE u.id NOT IN (:user_id)
         ${search}
-        ORDER BY u.createdAt DESC
+        ORDER BY u.created_at DESC
         LIMIT :limit OFFSET :offset
         `,
         {
@@ -109,56 +109,8 @@ class Controller {
       const result = {
         id: user.id,
         name: user.name,
-        email: user.email,
-        access: []
+        email: user.email
       }
-
-      const access = await db.sequelize.query(
-        `
-        SELECT 
-        m.id as menu_id,
-        m.name as menu,
-        m.code as module,
-        ua.read as read_permission,
-        ua.create as create_permission,
-        ua.update as update_permission,
-        ua.delete as delete_permission
-        FROM menus m
-        LEFT JOIN user_access ua ON ua.menu_id = m.id AND ua.user_id = :user_id
-        `,
-        {
-          replacements: {
-            user_id: userId
-          },
-          type: db.sequelize.QueryTypes.SELECT
-        }
-      )
-
-      const accessFormatted = access.map((item) => ({
-        menu_id: item.menu_id,
-        module: item.module,
-        name: item.menu,
-        permissions: [
-          {
-            action: 'read',
-            granted: Boolean(item.read_permission)
-          },
-          {
-            action: 'create',
-            granted: Boolean(item.create_permission)
-          },
-          {
-            action: 'update',
-            granted: Boolean(item.update_permission)
-          },
-          {
-            action: 'delete',
-            granted: Boolean(item.delete_permission)
-          }
-        ]
-      }))
-
-      result.access = accessFormatted
 
       res
         .status(HttpStatusCode.Ok)
@@ -212,7 +164,7 @@ class Controller {
         name: data.name,
         email: data.email,
         role_id: data.role_id,
-        is_active: true,
+        status: true,
         password: passwordHash
       })
 
@@ -272,7 +224,7 @@ class Controller {
         id: existUser.id,
         name: existUser.name,
         email: existUser.email,
-        is_active: existUser.is_active
+        status: existUser.status
       }
 
       res
