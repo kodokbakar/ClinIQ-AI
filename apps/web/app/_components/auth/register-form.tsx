@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { registerUser } from "../../_lib/auth-api";
+import { isValidEmail } from "../../_lib/auth-validation";
 import { AuthField } from "./auth-field";
 
 type RegisterErrors = Partial<
@@ -25,7 +26,7 @@ function validateRegister(
 
   if (!email) {
     errors.email = "Email tidak boleh kosong.";
-  } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+  } else if (!isValidEmail(email)) {
     errors.email = "Format email tidak valid.";
   }
 

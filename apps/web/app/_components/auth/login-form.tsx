@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { loginUser } from "../../_lib/auth-api";
+import { isValidEmail } from "../../_lib/auth-validation";
 import { AuthField } from "./auth-field";
 
 type LoginErrors = Partial<Record<"email" | "password" | "form", string>>;
@@ -12,7 +13,7 @@ function validateLogin(email: string, password: string): LoginErrors {
 
   if (!email) {
     errors.email = "Email tidak boleh kosong.";
-  } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+  } else if (!isValidEmail(email)) {
     errors.email = "Format email tidak valid.";
   }
 

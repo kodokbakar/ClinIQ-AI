@@ -44,11 +44,25 @@ describe("Login page", () => {
   it("shows validation errors for empty submit", () => {
     render(<LoginPage />);
 
-    const form = screen.getByTestId("login-form");
-    fireEvent.submit(form);
+    fireEvent.submit(screen.getByTestId("login-form"));
 
     expect(screen.queryByText("Email tidak boleh kosong.")).toBeTruthy();
     expect(screen.queryByText("Password tidak boleh kosong.")).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("shows validation error for malformed email", () => {
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "dok@@klinik.id" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "Password123" },
+    });
+    fireEvent.submit(screen.getByTestId("login-form"));
+
+    expect(screen.queryByText("Format email tidak valid.")).toBeTruthy();
     expect(fetch).not.toHaveBeenCalled();
   });
 

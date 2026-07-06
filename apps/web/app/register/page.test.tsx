@@ -57,6 +57,27 @@ describe("Register page", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("shows validation error for malformed email", () => {
+    render(<RegisterPage />);
+
+    fireEvent.change(screen.getByLabelText("Nama lengkap"), {
+      target: { value: "Ari Purnama" },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "ari@@klinik.id" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "Password123" },
+    });
+    fireEvent.change(screen.getByLabelText("Konfirmasi password"), {
+      target: { value: "Password123" },
+    });
+    fireEvent.submit(screen.getByTestId("register-form"));
+
+    expect(screen.queryByText("Format email tidak valid.")).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("validates password strength and confirmation match", () => {
     render(<RegisterPage />);
 
