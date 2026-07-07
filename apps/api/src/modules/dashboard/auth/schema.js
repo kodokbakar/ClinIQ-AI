@@ -24,7 +24,15 @@ const ChangePasswordSchema = z
     path: ['confirm_password']
   })
 
+const RegisterUserSchema = z.object({
+  name: z.string().min(1, 'Nama tidak boleh kosong'),
+  email: z.email('Format email tidak valid'),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
+  status: z.boolean('Status harus berupa boolean').optional().default(true)
+})
+
 module.exports = {
   LoginSchema,
-  ChangePasswordSchema
+  ChangePasswordSchema,
+  RegisterUserSchema
 }

@@ -1,9 +1,9 @@
 const { HttpStatusCode } = require('axios')
 const {
-  ValidationError,
-  DatabaseError,
-  ForeignKeyConstraintError,
-  UniqueConstraintError
+   ValidationError,
+   DatabaseError,
+   ForeignKeyConstraintError,
+   UniqueConstraintError
 } = require('sequelize')
 const { ZodError } = require('zod')
 
@@ -17,77 +17,77 @@ const { ZodError } = require('zod')
  * @returns {object} Formatted response
  */
 function api(res, code, { err = null, req = null } = {}) {
-  let metadata = {}
-  let message = 'success'
+   let metadata = {}
+   let message = 'success'
 
-  if (err && code !== HttpStatusCode.Ok) {
-    message = err.message
+   if (err && code !== HttpStatusCode.Ok) {
+      message = err.message
 
-    // Handle Sequelize errors
-    if (err instanceof ValidationError) {
-      message = `Validation error: ${err.errors[0].message}`
-    } else if (err instanceof DatabaseError) {
-      const debugMode = ['local', 'development', 'staging']
-      message = debugMode.includes(process.env.NODE_ENV)
-        ? `Database error: ${err.original?.message || err.message}`
-        : 'Database error occurred'
-    } else if (err instanceof ForeignKeyConstraintError) {
-      message = 'Foreign key constraint violation'
-    } else if (err instanceof UniqueConstraintError) {
-      message = `Duplicate entry: ${
-        err.errors[0]?.path || 'unique constraint violated'
-      }`
-    } else if (err instanceof ZodError) {
+      // Handle Sequelize errors
+      if (err instanceof ValidationError) {
+         message = `Validation error: ${err.errors[0].message}`
+      } else if (err instanceof DatabaseError) {
+         const debugMode = ['local', 'development', 'staging']
+         message = debugMode.includes(process.env.NODE_ENV)
+            ? `Database error: ${err.original?.message || err.message}`
+            : 'Database error occurred'
+      } else if (err instanceof ForeignKeyConstraintError) {
+         message = 'Foreign key constraint violation'
+      } else if (err instanceof UniqueConstraintError) {
+         message = `Duplicate entry: ${
+            err.errors[0]?.path || 'unique constraint violated'
+         }`
+      } else if (err instanceof ZodError) {
       // Handle Zod validation errors
-      const firstError = err.errors[0]
-      message =
+         const firstError = err.errors[0]
+         message =
         firstError.path.length > 0
-          ? `${firstError.path.join('.')}: ${firstError.message}`
-          : firstError.message
-    } else if (err.name === 'schema-validator' && Array.isArray(err)) {
+           ? `${firstError.path.join('.')}: ${firstError.message}`
+           : firstError.message
+      } else if (err.name === 'schema-validator' && Array.isArray(err)) {
       // Handle custom validation errors
-      message = err[0].msg
-    }
-  } else if (res && typeof res === 'object' && 'data' in res) {
-    if (res.per_page && res.page) {
-      const perPage = Number(res.per_page) || 10
-      const page = Number(res.page) || 1
-
-      metadata = {
-        per_page: perPage,
-        current_page: page,
-        total_row: res.count,
-        total_page: Math.ceil(res.count / perPage)
+         message = err[0].msg
       }
-    }
+   } else if (res && typeof res === 'object' && 'data' in res) {
+      if (res.per_page && res.page) {
+         const perPage = Number(res.per_page) || 10
+         const page = Number(res.page) || 1
 
-    res = res.data
-  } else if (
-    res &&
+         metadata = {
+            per_page: perPage,
+            current_page: page,
+            total_row: res.count,
+            total_page: Math.ceil(res.count / perPage)
+         }
+      }
+
+      res = res.data
+   } else if (
+      res &&
     typeof res === 'object' &&
     'rows' in res &&
     'count' in res
-  ) {
-    // Handle Sequelize pagination format
-    const perPage = parseInt(req?.query?.per_page) || 10
-    const page = parseInt(req?.query?.page) || 1
+   ) {
+      // Handle Sequelize pagination format
+      const perPage = parseInt(req?.query?.per_page) || 10
+      const page = parseInt(req?.query?.page) || 1
 
-    metadata = {
-      per_page: perPage,
-      current_page: page,
-      total_row: res.count,
-      total_page: Math.ceil(res.count / perPage)
-    }
+      metadata = {
+         per_page: perPage,
+         current_page: page,
+         total_row: res.count,
+         total_page: Math.ceil(res.count / perPage)
+      }
 
-    res = res.rows
-  }
+      res = res.rows
+   }
 
-  return {
-    success: code === HttpStatusCode.Ok,
-    message: message,
-    metadata: metadata,
-    data: res
-  }
+   return {
+      success: code === HttpStatusCode.Ok,
+      message: message,
+      metadata: metadata,
+      data: res
+   }
 }
 
 /**
@@ -97,10 +97,10 @@ function api(res, code, { err = null, req = null } = {}) {
  * @returns {object} Sequelize pagination options
  */
 function sequelizePaginate(page, perPage) {
-  return {
-    offset: (page - 1) * perPage,
-    limit: perPage
-  }
+   return {
+      offset: (page - 1) * perPage,
+      limit: perPage
+   }
 }
 
 /**
@@ -111,15 +111,15 @@ function sequelizePaginate(page, perPage) {
  * @returns {Array} Paginated array
  */
 function paginateArray(array, pageSize, pageNumber) {
-  const perPage = pageSize || 10
-  const page = pageNumber || 1
+   const perPage = pageSize || 10
+   const page = pageNumber || 1
 
-  return array.slice((page - 1) * perPage, page * perPage)
+   return array.slice((page - 1) * perPage, page * perPage)
 }
 
 module.exports = {
-  api,
-  results: api,
-  sequelizePaginate,
-  paginateArray
+   api,
+   results: api,
+   sequelizePaginate,
+   paginateArray
 }
