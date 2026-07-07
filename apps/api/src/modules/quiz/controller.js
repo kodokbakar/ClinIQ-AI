@@ -44,11 +44,10 @@ Format your response as JSON:
 
   try {
     const completion = await aiClient.chat.completions.create({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: process.env.AI_MODEL || 'meta-llama/llama-3.3-70b-instruct',
       messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
       temperature: 0.3,
-      max_tokens: 1500
+      max_tokens: 500
     })
 
     const explanation = JSON.parse(completion.choices[0].message.content)
@@ -182,10 +181,16 @@ class Controller {
       })
     } catch (err) {
       console.log(err)
-      res.status(err.code || HttpStatusCode.InternalServerError).json({
-        success: false,
-        message: err.message
-      })
+      res
+        .status(
+          typeof err.code === 'number'
+            ? err.code
+            : HttpStatusCode.InternalServerError
+        )
+        .json({
+          success: false,
+          message: err.message
+        })
     }
   }
 
@@ -256,10 +261,16 @@ class Controller {
       })
     } catch (err) {
       console.log(err)
-      res.status(err.code || HttpStatusCode.InternalServerError).json({
-        success: false,
-        message: err.message
-      })
+      res
+        .status(
+          typeof err.code === 'number'
+            ? err.code
+            : HttpStatusCode.InternalServerError
+        )
+        .json({
+          success: false,
+          message: err.message
+        })
     }
   }
 
@@ -347,10 +358,16 @@ class Controller {
       })
     } catch (err) {
       console.log(err)
-      res.status(err.code || HttpStatusCode.InternalServerError).json({
-        success: false,
-        message: err.message
-      })
+      res
+        .status(
+          typeof err.code === 'number'
+            ? err.code
+            : HttpStatusCode.InternalServerError
+        )
+        .json({
+          success: false,
+          message: err.message
+        })
     }
   }
 
@@ -404,10 +421,16 @@ class Controller {
       })
     } catch (err) {
       console.log(err)
-      res.status(err.code || HttpStatusCode.InternalServerError).json({
-        success: false,
-        message: err.message
-      })
+      res
+        .status(
+          typeof err.code === 'number'
+            ? err.code
+            : HttpStatusCode.InternalServerError
+        )
+        .json({
+          success: false,
+          message: err.message
+        })
     }
   }
 }

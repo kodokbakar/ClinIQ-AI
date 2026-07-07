@@ -38,23 +38,23 @@ const { authentication, authorize } = require('../../middleware/auth')
 const upload = multer({ storage: multer.memoryStorage() })
 
 router.post(
-  '/icd/upload',
-  authentication,
-  authorize('admin'),
-  upload.single('file'),
-  Controller.uploadICD
+   '/icd/upload',
+   authentication,
+   authorize('admin'),
+   upload.single('file'),
+   Controller.uploadICD
 )
 router.post(
-  '/vignettes/generate',
-  authentication,
-  authorize('admin'),
-  Controller.generateVignette
+   '/vignettes/generate',
+   authentication,
+   authorize('admin'),
+   Controller.generateVignette
 )
 router.post(
-  '/vignettes/bulk',
-  authentication,
-  authorize('admin'),
-  Controller.bulkGenerate
+   '/vignettes/bulk',
+   authentication,
+   authorize('admin'),
+   Controller.bulkGenerate
 )
 
 module.exports = router

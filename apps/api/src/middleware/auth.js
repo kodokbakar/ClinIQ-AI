@@ -59,7 +59,7 @@ const authentication = async (req, res, next) => {
         }
       }
 
-      if (!user.is_active) {
+      if (!user.status) {
         throw {
           code: HttpStatusCode.Unauthorized,
           message: 'Unauthorized, Account is not active'
@@ -82,17 +82,19 @@ const authentication = async (req, res, next) => {
     err.code = err.code ?? HttpStatusCode.InternalServerError
 
     if (err.name === 'JsonWebTokenError') {
-      err = {
+      const error = {
         message: 'Unauthorized, invalid token',
         code: HttpStatusCode.Unauthorized
       }
+      return res.status(error.code).json(api(null, error.code, { err: error }))
     }
 
     if (err.name === 'TokenExpiredError') {
-      err = {
+      const error = {
         message: 'Unauthorized, token expired',
         code: HttpStatusCode.Unauthorized
       }
+      return res.status(error.code).json(api(null, error.code, { err: error }))
     }
 
     res.status(err.code).json(api(null, err.code, { err }))
