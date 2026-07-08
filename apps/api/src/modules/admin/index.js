@@ -30,12 +30,15 @@
  *     responses:
  *       200: { description: Bulk generation started }
  */
+
 const Controller = require('./controller')
 const router = require('express').Router()
 const multer = require('multer')
 const { authentication, authorize } = require('../../middleware/auth')
 
 const upload = multer({ storage: multer.memoryStorage() })
+
+router.get('/me', authentication, authorize('admin'), Controller.me)
 
 router.post(
    '/icd/upload',

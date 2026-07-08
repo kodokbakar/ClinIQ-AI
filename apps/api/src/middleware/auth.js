@@ -1,6 +1,6 @@
 const { HttpStatusCode } = require('axios')
 const JWT = require('../utils/jwt')
-const { user: User } = require('../../db/models')
+const db = require('../../db/models')
 const { api } = require('../utils/api')
 
 /**
@@ -43,37 +43,34 @@ const authentication = async (req, res, next) => {
          }
       }
 
-      const token = reqToken
-      const decodedToken = JWT.verifyToken(token)
+      const decodedToken = JWT.verifyToken(reqToken)
 
-      let me = null
-      if (!me) {
-         const user = await User.findOne({
-            where: { id: decodedToken.id }
-         })
+      const user = await db.user.findOne({
+         where: { id: decodedToken.id }
+      })
 
-         if (!user) {
-            throw {
-               code: HttpStatusCode.Unauthorized,
-               message: 'Unauthorized, Invalid Token'
-            }
+      if (!user) {
+         throw {
+            code: HttpStatusCode.Unauthorized,
+            message: 'Unauthorized, Invalid Token'
          }
-
-         if (!user.status) {
-            throw {
-               code: HttpStatusCode.Unauthorized,
-               message: 'Unauthorized, Account is not active'
-            }
-         }
-
-         me = user
       }
 
+      if (!user.status) {
+         throw {
+            code: HttpStatusCode.Unauthorized,
+            message: 'Unauthorized, Account is not active'
+         }
+      }
+
+      const role = user.role_id ? await db.role.findByPk(user.role_id) : null
+
       req.user = {
-         id: me.id,
-         name: me.name,
-         email: me.email,
-         is_superadmin: decodedToken.is_superadmin
+         id: user.id,
+         name: user.name,
+         email: user.email,
+         role_id: user.role_id,
+         is_superadmin: Boolean(role?.is_superadmin)
       }
 
       next()
