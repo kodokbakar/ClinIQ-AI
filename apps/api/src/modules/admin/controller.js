@@ -1,6 +1,5 @@
 const db = require('../../../db/models')
 const { getAIClient } = require('../../config/ai')
-const aiClient = getAIClient()
 const { HttpStatusCode } = require('axios')
 const csv = require('csv-parser')
 const { Readable } = require('stream')
@@ -19,6 +18,7 @@ class Controller {
          }
       })
    }
+
    /** POST /v1/admin/icd/upload — Upload ICD codes CSV */
    static async uploadICD(req, res) {
       try {
@@ -100,6 +100,8 @@ class Controller {
    /** POST /v1/admin/vignettes/generate — Generate vignette via AI */
    static async generateVignette(req, res) {
       try {
+         const aiClient = getAIClient()
+
          if (!aiClient) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
@@ -171,6 +173,8 @@ class Controller {
    /** POST /v1/admin/vignettes/bulk — Bulk generate vignettes for diseases without them */
    static async bulkGenerate(req, res) {
       try {
+         const aiClient = getAIClient()
+
          if (!aiClient) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
