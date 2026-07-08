@@ -50,6 +50,8 @@ app.use(
 )
 app.use(express.json({ limit: '50mb' }))
 
+app.use('/health', require('./src/modules/health'))
+
 app.use('/api', route)
 app.use('/reference', apiReference({ spec: { content: swaggerSpec } }))
 

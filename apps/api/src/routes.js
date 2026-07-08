@@ -9,6 +9,9 @@ router.get('/status', (req, res) => {
    res.send('Running ⚡')
 })
 
+// Health check route
+router.use('/health', require('./modules/health'))
+
 // DASHBOARD
 router.use('/dashboard/auth', require('./modules/dashboard/auth'))
 router.use(
