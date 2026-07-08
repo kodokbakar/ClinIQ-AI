@@ -19,8 +19,8 @@ class Controller {
             name,
             description: description || '',
             invite_code:
-          invite_code ||
-          Math.random().toString(36).substring(2, 10).toUpperCase(),
+               invite_code ||
+               Math.random().toString(36).substring(2, 10).toUpperCase(),
             owner_id: userId
          })
 
@@ -39,7 +39,8 @@ class Controller {
                description: group.description,
                invite_code: group.invite_code,
                owner_id: group.owner_id,
-               created_at: group.created_at
+               member_count: group.member_count,
+               created_at: group.createdAt
             }
          })
       } catch (err) {
@@ -68,7 +69,8 @@ class Controller {
                      'description',
                      'invite_code',
                      'owner_id',
-                     'created_at'
+                     'member_count',
+                     'createdAt'
                   ]
                }
             ],
@@ -114,15 +116,21 @@ class Controller {
          const group = await db.Group.findByPk(id, {
             include: [
                {
-                  model: db.User,
+                  model: db.GroupMember,
                   as: 'members',
-                  through: { attributes: ['is_admin', 'joined_at'] },
-                  attributes: ['id', 'username', 'email', 'full_name']
+                  attributes: ['id', 'user_id', 'is_admin', 'joined_at'],
+                  include: [
+                     {
+                        model: db.User,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email']
+                     }
+                  ]
                },
                {
                   model: db.User,
                   as: 'owner',
-                  attributes: ['id', 'username', 'email']
+                  attributes: ['id', 'name', 'email']
                }
             ]
          })
@@ -189,6 +197,8 @@ class Controller {
             is_admin: false
          })
 
+         await group.increment('member_count')
+
          res.status(HttpStatusCode.Created).json({
             success: true,
             data: { message: 'Successfully joined group', group_id: id }
@@ -229,6 +239,7 @@ class Controller {
          }
 
          await membership.destroy()
+         await group.decrement('member_count')
 
          res.status(HttpStatusCode.Ok).json({
             success: true,
