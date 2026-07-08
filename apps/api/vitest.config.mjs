@@ -5,8 +5,24 @@ export default defineConfig({
     globals: true,
     fileParallelism: false,
     testTimeout: 30000,
-    reporters: ["agent"],
+    reporters: ['agent'],
     include: ['test/**/*.test.js'],
-    globalSetup: './test/global-test.mjs'
+    globalSetup: './test/global-test.mjs',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'html'],
+      include: [
+        'index.js',
+        'config/**/*.js',
+        'db/models/**/*.js',
+        'src/**/*.js'
+      ],
+      exclude: [
+        'coverage/**',
+        'db/migrations/**',
+        'db/seeders/**',
+        'test/**'
+      ]
+    }
   }
 })
