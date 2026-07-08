@@ -1,9 +1,10 @@
 import process from 'node:process'
 import { createRequire } from 'node:module'
 
-process.env.NODE_ENV = process.env.NODE_ENV || 'local'
+process.env.NODE_ENV = 'local'
 process.env.JWT_KEY = process.env.JWT_KEY || 'test-secret'
 process.env.ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*'
+process.env.SKIP_AI_EXPLANATIONS = 'true'
 
 const require = createRequire(import.meta.url)
 
