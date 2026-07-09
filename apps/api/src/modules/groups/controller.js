@@ -191,19 +191,36 @@ class Controller {
             })
          }
 
-         await db.GroupMember.create({
-            group_id: id,
-            user_id: userId,
-            is_admin: false
-         })
+         await db.sequelize.transaction(async (transaction) => {
+            await db.GroupMember.create(
+               {
+                  group_id: id,
+                  user_id: userId,
+                  is_admin: false
+               },
+               { transaction }
+            )
 
-         await group.increment('member_count')
+            await db.sequelize.query(
+               'UPDATE groups SET member_count = member_count + 1 WHERE id = :id',
+               {
+                  replacements: { id },
+                  transaction
+               }
+            )
+         })
 
          res.status(HttpStatusCode.Created).json({
             success: true,
             data: { message: 'Successfully joined group', group_id: id }
          })
       } catch (err) {
+         if (err.name === 'SequelizeUniqueConstraintError') {
+            return res.status(HttpStatusCode.Conflict).json({
+               success: false,
+               message: 'Already a member of this group'
+            })
+         }
          console.error('Join group error:', err)
          res.status(err.code || HttpStatusCode.InternalServerError).json({
             success: false,
@@ -238,8 +255,17 @@ class Controller {
             })
          }
 
-         await membership.destroy()
-         await group.decrement('member_count')
+         await db.sequelize.transaction(async (transaction) => {
+            await membership.destroy({ transaction })
+
+            await db.sequelize.query(
+               'UPDATE groups SET member_count = GREATEST(member_count - 1, 1) WHERE id = :id',
+               {
+                  replacements: { id },
+                  transaction
+               }
+            )
+         })
 
          res.status(HttpStatusCode.Ok).json({
             success: true,

@@ -9,6 +9,7 @@ const { createServer } = require('node:http')
 const cookieParser = require('cookie-parser')
 const swaggerSpec = require('./src/config/swagger')
 const { apiReference } = require('@scalar/express-api-reference')
+const rateLimit = require('express-rate-limit')
 const db = require('./db/models')
 
 function getAllowedOrigins() {
@@ -22,12 +23,13 @@ const corsOptions = (req, callback) => {
    const mode = process.env.NODE_ENV || 'development'
    const origin = req.headers.origin
    const allowedOrigins = getAllowedOrigins()
+   const allowsWildcardLocal = mode === 'local' && allowedOrigins.includes('*')
 
-   if (mode === 'local') {
-      return callback(null, { origin: true, credentials: true })
+   if (!origin) {
+      return callback(null, { origin: false, credentials: false })
    }
 
-   if (origin && allowedOrigins.includes(origin)) {
+   if (allowsWildcardLocal || allowedOrigins.includes(origin)) {
       return callback(null, { origin: true, credentials: true })
    }
 
@@ -37,6 +39,23 @@ const corsOptions = (req, callback) => {
 app.use(morgan('dev'))
 app.use(cors(corsOptions))
 app.use(cookieParser())
+
+const authRateLimiter = rateLimit({
+   windowMs: 15 * 60 * 1000,
+   max: 20,
+   standardHeaders: true,
+   legacyHeaders: false,
+   message: {
+      success: false,
+      message: 'Too many auth requests. Please try again later.',
+      data: null
+   }
+})
+
+if (process.env.NODE_ENV !== 'local') {
+   app.use('/api/v1/auth', authRateLimiter)
+}
+
 function rawBodySaver(req, res, buf, encoding) {
    if (buf && buf.length) {
       req.rawBody = buf.toString(encoding || 'utf8')
@@ -53,7 +72,7 @@ app.use('/health', require('./src/modules/health'))
 app.use('/api', route)
 app.use('/reference', apiReference({ spec: { content: swaggerSpec } }))
 
-app.use((req, res, next) => {
+app.use((req, res) => {
    res.status(404).json({
       success: false,
       message: 'Route not found',

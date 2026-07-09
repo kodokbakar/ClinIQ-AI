@@ -48,11 +48,13 @@ class Controller {
             })
          }
 
-         const aiClient = getAIClient()
-         if (!aiClient) {
+         let aiClient
+         try {
+            aiClient = getAIClient()
+         } catch (err) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
-               message: 'AI service not configured. Please set AI_API_KEY.'
+               message: err.message
             })
          }
 

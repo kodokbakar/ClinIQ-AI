@@ -17,9 +17,17 @@ const authorize = (...roles) => {
       }
 
       const userRoles = []
-      if (req.user.is_superadmin) userRoles.push('admin')
 
-      const hasRole = roles.some((role) => userRoles.includes(role))
+      if (req.user.is_superadmin) {
+         userRoles.push('admin', 'superadmin')
+      }
+
+      if (req.user.role?.name) {
+         userRoles.push(req.user.role.name.toLowerCase())
+      }
+
+      const allowedRoles = roles.map((role) => role.toLowerCase())
+      const hasRole = allowedRoles.some((role) => userRoles.includes(role))
 
       if (!hasRole) {
          return res.status(HttpStatusCode.Forbidden).json({
@@ -70,7 +78,13 @@ const authentication = async (req, res, next) => {
          name: user.name,
          email: user.email,
          role_id: user.role_id,
-         is_superadmin: Boolean(role?.is_superadmin)
+         is_superadmin: Boolean(role?.is_superadmin),
+         role: role
+            ? {
+               id: role.id,
+               name: role.name
+            }
+            : null
       }
 
       next()

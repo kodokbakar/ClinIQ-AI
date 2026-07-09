@@ -27,15 +27,13 @@ function api(res, code, { err = null, req = null } = {}) {
             : err.message
 
       // Handle Sequelize errors
-      if (err instanceof UniqueConstraintError) {
-         message = `Duplicate entry: ${err.errors[0]?.path || 'unique constraint violated'
-         }`
-      } else if (err instanceof ForeignKeyConstraintError) {
-         message = 'Foreign key constraint violation'
-      } else if (err instanceof ValidationError) {
-         message = `Validation error: ${err.errors[0].message}`
-      } else if (err instanceof DatabaseError) {
-         message = 'Database error occurred'
+      if (
+         err instanceof UniqueConstraintError ||
+         err instanceof ForeignKeyConstraintError ||
+         err instanceof ValidationError ||
+         err instanceof DatabaseError
+      ) {
+         message = 'Terjadi kesalahan. Silakan coba lagi.'
       } else if (err instanceof ZodError) {
          const firstError = err.issues?.[0] || err.errors?.[0]
          message =

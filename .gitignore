@@ -36,4 +36,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# markdown files
 apps/api/test-module.md
+apps/api/api-audit.md

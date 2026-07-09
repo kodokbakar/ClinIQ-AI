@@ -100,12 +100,13 @@ class Controller {
    /** POST /v1/admin/vignettes/generate — Generate vignette via AI */
    static async generateVignette(req, res) {
       try {
-         const aiClient = getAIClient()
-
-         if (!aiClient) {
+         let aiClient
+         try {
+            aiClient = getAIClient()
+         } catch (err) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
-               message: 'AI service not configured. Set AI_API_KEY.'
+               message: err.message
             })
          }
 
@@ -173,12 +174,13 @@ class Controller {
    /** POST /v1/admin/vignettes/bulk — Bulk generate vignettes for diseases without them */
    static async bulkGenerate(req, res) {
       try {
-         const aiClient = getAIClient()
-
-         if (!aiClient) {
+         let aiClient
+         try {
+            aiClient = getAIClient()
+         } catch (err) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
-               message: 'AI service not configured'
+               message: err.message
             })
          }
 

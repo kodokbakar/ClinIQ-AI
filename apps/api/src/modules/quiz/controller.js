@@ -2,7 +2,6 @@ const db = require('../../../db/models')
 const redisClient = require('../../../config/redis')
 const { getCache, setCacheWithTTL } = require('../../utils/redis')
 const { getAIClient } = require('../../config/ai')
-const aiClient = getAIClient()
 const { Op } = require('sequelize')
 const { HttpStatusCode } = require('axios')
 const { MAX_CLUES, scoreForClues } = require('../../utils/quiz')
@@ -68,12 +67,20 @@ async function findUnattemptedVignette(userId) {
 }
 
 async function createAttempt(userId, vignetteId) {
-   return db.QuizAttempt.create({
-      user_id: userId,
-      vignette_id: vignetteId,
-      clues_revealed: FIRST_CLUE_NUMBER,
-      attempt_date: todayDate()
+   const [attempt] = await db.QuizAttempt.findOrCreate({
+      where: {
+         user_id: userId,
+         vignette_id: vignetteId
+      },
+      defaults: {
+         user_id: userId,
+         vignette_id: vignetteId,
+         clues_revealed: FIRST_CLUE_NUMBER,
+         attempt_date: todayDate()
+      }
    })
+
+   return attempt
 }
 
 /**
@@ -111,6 +118,7 @@ Format your response as JSON:
   "key_points": ["board-style pearl1", "board-style pearl2"]
 }`
 
+   const aiClient = getAIClient()
    try {
       const completion = await aiClient.chat.completions.create({
          model: process.env.AI_MODEL || 'meta-llama/llama-3.3-70b-instruct',
@@ -405,12 +413,11 @@ class Controller {
             try {
                await updateLeaderboards(userId, attempt.score)
 
-               if (
-                  aiClient &&
-                  process.env.SKIP_AI_EXPLANATIONS !== 'true'
-               ) {
+               if (process.env.SKIP_AI_EXPLANATIONS !== 'true') {
                   const diseaseId = attempt.vignette.disease_id
-                  generateExplanation(diseaseId, 'id').catch(console.error)
+                  generateExplanation(diseaseId, 'id').catch((error) => {
+                     console.error('AI explanation generation failed:', error.message)
+                  })
                }
             } catch (redisError) {
                console.error('Redis operation failed:', redisError.message)

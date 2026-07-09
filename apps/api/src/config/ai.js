@@ -1,5 +1,13 @@
 const OpenAI = require('openai')
 
+class AIConfigurationError extends Error {
+   constructor() {
+      super('AI service not configured')
+      this.name = 'AIConfigurationError'
+      this.code = 503
+   }
+}
+
 let client = null
 
 function setAIClient(mockClient) {
@@ -17,7 +25,7 @@ function getAIClient() {
    const AI_API_KEY = process.env.AI_API_KEY
 
    if (!AI_BASE_URL || !AI_API_KEY) {
-      return null
+      throw new AIConfigurationError()
    }
 
    client = new OpenAI({
@@ -34,4 +42,9 @@ function getAIClient() {
    return client
 }
 
-module.exports = { getAIClient, setAIClient, resetAIClient }
+module.exports = {
+   getAIClient,
+   setAIClient,
+   resetAIClient,
+   AIConfigurationError
+}

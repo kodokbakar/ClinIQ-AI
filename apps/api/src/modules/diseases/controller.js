@@ -9,6 +9,12 @@ class Controller {
    static async search(req, res) {
       try {
          const q = (req.query.q || '').trim()
+         if (q.length > 100) {
+            return res.status(HttpStatusCode.BadRequest).json({
+               success: false,
+               message: 'Search query is too long'
+            })
+         }
          if (q.length < 2) {
             return res.status(HttpStatusCode.Ok).json({ success: true, data: [] })
          }
@@ -57,7 +63,7 @@ class Controller {
             meta: { 'X-Cache': 'MISS' }
          })
       } catch (err) {
-         console.log(err)
+         console.error('Disease search failed:', err.message)
          const code = err.code || HttpStatusCode.InternalServerError
          res.status(code).json({
             success: false,

@@ -8,6 +8,7 @@ export default defineConfig({
     reporters: ['agent'],
     include: ['test/**/*.test.js'],
     globalSetup: './test/global-test.mjs',
+    setupFiles: ['./test/setup-env.js'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
