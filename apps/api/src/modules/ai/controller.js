@@ -1,8 +1,10 @@
 const db = require('../../../db/models')
 const { getCache, setCacheWithTTL } = require('../../utils/redis')
 const { getAIClient } = require('../../config/ai')
-const aiClient = getAIClient()
 const { HttpStatusCode } = require('axios')
+const uuid = require('uuid')
+
+const CACHE_TTL_SECONDS = 86400
 
 class Controller {
    /** GET /v1/ai/explanation/:disease_id?locale=id */
@@ -11,13 +13,13 @@ class Controller {
          const { disease_id } = req.params
          const locale = (req.query.locale || 'id').toLowerCase()
 
-         if (!disease_id) {
+         if (!uuid.validate(disease_id)) {
             return res.status(HttpStatusCode.BadRequest).json({
                success: false,
-               message: 'disease_id is required'
+               message: 'Invalid disease ID'
             })
          }
-         // Try cache first
+
          const cacheKey = `explanation:${disease_id}:${locale}`
          const cached = await getCache(cacheKey)
          if (cached) {
@@ -26,7 +28,7 @@ class Controller {
                data: cached
             })
          }
-         // Get disease from DB
+
          const disease = await db.Disease.findByPk(disease_id)
          if (!disease) {
             return res.status(HttpStatusCode.NotFound).json({
@@ -35,25 +37,27 @@ class Controller {
             })
          }
 
-         // Check existing explanation in DB
          const existing = await db.AIExplanation.findOne({
             where: { disease_id, locale }
          })
          if (existing) {
-            await setCacheWithTTL(cacheKey, existing, 86400)
+            await setCacheWithTTL(cacheKey, existing, CACHE_TTL_SECONDS)
             return res.status(HttpStatusCode.Ok).json({
                success: true,
                data: existing
             })
          }
 
-         // Generate via 9Router (requires AI_API_KEY)
-         if (!aiClient) {
+         let aiClient
+         try {
+            aiClient = getAIClient()
+         } catch (err) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
-               message: 'AI service not configured. Please set AI_API_KEY.'
+               message: err.message
             })
          }
+
          const prompt = `You are a medical education AI for Indonesian medical students (Gen Z).
 Provide a clear, concise explanation of "${disease.name}" (ICD: ${disease.icd_code}) in ${locale === 'id' ? 'Bahasa Indonesia' : 'English'}.
 
@@ -68,16 +72,25 @@ Format your response as JSON:
   "key_points": ["board-style pearl1", "board-style pearl2"]
 }`
 
-         const completion = await aiClient.chat.completions.create({
-            model: process.env.AI_MODEL || 'meta-llama/llama-3.3-70b-instruct',
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.3,
-            max_tokens: 500
-         })
+         let completion
+         try {
+            completion = await aiClient.chat.completions.create({
+               model: process.env.AI_MODEL || 'meta-llama/llama-3.3-70b-instruct',
+               messages: [{ role: 'user', content: prompt }],
+               temperature: 0.3,
+               max_tokens: 500
+            })
+         } catch (error) {
+            console.error('AI provider failure:', error.message)
+
+            return res.status(HttpStatusCode.BadGateway).json({
+               success: false,
+               message: 'AI provider failed'
+            })
+         }
 
          const explanation = JSON.parse(completion.choices[0].message.content)
 
-         // Save to DB
          const saved = await db.AIExplanation.create({
             disease_id,
             locale,
@@ -87,10 +100,11 @@ Format your response as JSON:
             diagnosis: explanation.diagnosis,
             management: explanation.management,
             prevention: explanation.prevention,
-            key_points: explanation.key_points
+            key_points: explanation.key_points,
+            ai_model_used: process.env.AI_MODEL || null
          })
 
-         await setCacheWithTTL(cacheKey, saved, 86400)
+         await setCacheWithTTL(cacheKey, saved, CACHE_TTL_SECONDS)
 
          res.status(HttpStatusCode.Created).json({
             success: true,
@@ -98,10 +112,14 @@ Format your response as JSON:
          })
       } catch (err) {
          console.error('AI Explanation Error:', err)
-         const httpCode = typeof err.code === 'number' ? err.code : HttpStatusCode.InternalServerError
+         const httpCode =
+            typeof err.code === 'number'
+               ? err.code
+               : HttpStatusCode.InternalServerError
+
          res.status(httpCode).json({
             success: false,
-            message: err.message
+            message: 'Failed to get AI explanation'
          })
       }
    }

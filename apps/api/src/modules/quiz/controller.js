@@ -2,10 +2,86 @@ const db = require('../../../db/models')
 const redisClient = require('../../../config/redis')
 const { getCache, setCacheWithTTL } = require('../../utils/redis')
 const { getAIClient } = require('../../config/ai')
-const aiClient = getAIClient()
 const { Op } = require('sequelize')
 const { HttpStatusCode } = require('axios')
 const { MAX_CLUES, scoreForClues } = require('../../utils/quiz')
+
+const CACHE_TTL_SECONDS = 86400
+const FIRST_CLUE_NUMBER = 1
+const EMPTY_QUIZ_MESSAGE = 'No more vignettes available. All completed!'
+
+function todayDate() {
+   return new Date().toISOString().slice(0, 10)
+}
+
+function isCompleted(attempt) {
+   return attempt.is_correct !== null
+}
+
+function revealedClueCount(value) {
+   return Math.max(Number(value) || 0, FIRST_CLUE_NUMBER)
+}
+
+function cluePayload(clue) {
+   return {
+      clue_number: clue.clue_number,
+      content: clue.content,
+      type: clue.type
+   }
+}
+
+function clueSlotPayload(clue, cluesRevealed) {
+   const isRevealed = clue.clue_number <= cluesRevealed
+
+   return {
+      clue_number: clue.clue_number,
+      content: isRevealed ? clue.content : null,
+      type: clue.type,
+      is_revealed: isRevealed
+   }
+}
+
+async function getVignetteClues(vignetteId) {
+   return db.Clue.findAll({
+      where: { vignette_id: vignetteId },
+      attributes: ['clue_number', 'content', 'type'],
+      order: [['clue_number', 'ASC']]
+   })
+}
+
+async function findUnattemptedVignette(userId) {
+   const attemptedIds = (
+      await db.QuizAttempt.findAll({
+         attributes: ['vignette_id'],
+         where: { user_id: userId }
+      })
+   ).map((attempt) => attempt.vignette_id)
+
+   const where = attemptedIds.length > 0 ? { id: { [Op.notIn]: attemptedIds } } : {}
+
+   return db.QuizVignette.findOne({
+      where,
+      attributes: ['id', 'variant_name'],
+      order: db.sequelize.random()
+   })
+}
+
+async function createAttempt(userId, vignetteId) {
+   const [attempt] = await db.QuizAttempt.findOrCreate({
+      where: {
+         user_id: userId,
+         vignette_id: vignetteId
+      },
+      defaults: {
+         user_id: userId,
+         vignette_id: vignetteId,
+         clues_revealed: FIRST_CLUE_NUMBER,
+         attempt_date: todayDate()
+      }
+   })
+
+   return attempt
+}
 
 /**
  * Async helper to generate AI explanation and save to DB/cache.
@@ -15,13 +91,13 @@ const { MAX_CLUES, scoreForClues } = require('../../utils/quiz')
 async function generateExplanation(diseaseId, locale) {
    const cacheKey = `explanation:${diseaseId}:${locale}`
    const cached = await getCache(cacheKey)
-   if (cached) return // Already exists
+   if (cached) return
 
    const existing = await db.AIExplanation.findOne({
       where: { disease_id: diseaseId, locale }
    })
    if (existing) {
-      await setCacheWithTTL(cacheKey, existing, 86400)
+      await setCacheWithTTL(cacheKey, existing, CACHE_TTL_SECONDS)
       return
    }
 
@@ -42,6 +118,7 @@ Format your response as JSON:
   "key_points": ["board-style pearl1", "board-style pearl2"]
 }`
 
+   const aiClient = getAIClient()
    try {
       const completion = await aiClient.chat.completions.create({
          model: process.env.AI_MODEL || 'meta-llama/llama-3.3-70b-instruct',
@@ -64,7 +141,7 @@ Format your response as JSON:
          key_points: explanation.key_points
       })
 
-      await setCacheWithTTL(cacheKey, saved, 86400)
+      await setCacheWithTTL(cacheKey, saved, CACHE_TTL_SECONDS)
    } catch (error) {
       console.error(
          `Failed to generate explanation for ${diseaseId}:`,
@@ -73,110 +150,52 @@ Format your response as JSON:
    }
 }
 
+async function updateLeaderboards(userId, score) {
+   await redisClient.ping()
+   await redisClient.zincrby('global_leaderboard', score, userId)
+
+   const groupMember = await db.GroupMember.findOne({
+      where: { user_id: userId },
+      attributes: ['group_id']
+   })
+
+   if (groupMember) {
+      await redisClient.zincrby(
+         `group_leaderboard:${groupMember.group_id}`,
+         score,
+         userId
+      )
+   }
+}
+
 class Controller {
-   /** GET /v1/quiz/daily — serve today's vignette (or resume existing) */
-   static async daily(req, res) {
+   static async random(req, res) {
       try {
          const userId = req.user.id
-         const today = new Date().toISOString().slice(0, 10)
-
-         // Resume existing attempt for today
-         const existing = await db.QuizAttempt.findOne({
-            where: { user_id: userId, attempt_date: today },
-            include: [
-               {
-                  model: db.QuizVignette,
-                  as: 'vignette',
-                  include: [
-                     {
-                        model: db.Clue,
-                        as: 'clues',
-                        attributes: ['clue_number', 'content', 'type'],
-                        order: [['clue_number', 'ASC']]
-                     }
-                  ]
-               }
-            ]
-         })
-         if (existing) {
-            const clues = existing.vignette.clues
-               .filter((c) => c.clue_number <= existing.clues_revealed)
-               .map((c) => ({
-                  clue_number: c.clue_number,
-                  content: c.content,
-                  type: c.type
-               }))
-
-            return res.status(HttpStatusCode.Ok).json({
-               success: true,
-               data: {
-                  attempt_id: existing.id,
-                  vignette_id: existing.vignette_id,
-                  clues_revealed: existing.clues_revealed,
-                  is_completed: existing.is_correct !== null,
-                  is_correct: existing.is_correct,
-                  score: existing.score,
-                  clues
-               }
-            })
-         }
-
-         // Pick a vignette the user has never attempted
-         const attemptedIds = (
-            await db.QuizAttempt.findAll({
-               attributes: ['vignette_id'],
-               where: { user_id: userId }
-            })
-         ).map((a) => a.vignette_id)
-
-         const vignetteWhere =
-        attemptedIds.length > 0 ? { id: { [Op.notIn]: attemptedIds } } : {}
-
-         const vignette = await db.QuizVignette.findOne({
-            where: vignetteWhere,
-            include: [
-               {
-                  model: db.Clue,
-                  as: 'clues',
-                  attributes: ['clue_number', 'content', 'type'],
-                  order: [['clue_number', 'ASC']],
-                  limit: 1
-               }
-            ]
-         })
+         const vignette = await findUnattemptedVignette(userId)
 
          if (!vignette) {
             return res.status(HttpStatusCode.Ok).json({
                success: true,
-               data: { message: 'No more vignettes available. All completed!' }
+               data: {
+                  message: EMPTY_QUIZ_MESSAGE,
+                  is_empty: true
+               }
             })
          }
 
-         const attempt = await db.QuizAttempt.create({
-            user_id: userId,
-            vignette_id: vignette.id,
-            clues_revealed: 0,
-            attempt_date: today
-         })
+         const attempt = await createAttempt(userId, vignette.id)
+         const clues = await getVignetteClues(vignette.id)
+         const cluesRevealed = revealedClueCount(attempt.clues_revealed)
 
-         const firstClue = vignette.clues?.[0] || null
-
-         res.status(HttpStatusCode.Created).json({
+         return res.status(HttpStatusCode.Created).json({
             success: true,
             data: {
                attempt_id: attempt.id,
                vignette_id: vignette.id,
-               clues_revealed: 0,
+               clues_revealed: cluesRevealed,
                is_completed: false,
-               clues: firstClue
-                  ? [
-                     {
-                        clue_number: firstClue.clue_number,
-                        content: firstClue.content,
-                        type: firstClue.type
-                     }
-                  ]
-                  : []
+               clues: clues.map((clue) => clueSlotPayload(clue, cluesRevealed))
             }
          })
       } catch (err) {
@@ -194,11 +213,79 @@ class Controller {
       }
    }
 
-   /** POST /v1/quiz/reveal-clue — increment clues_revealed, return next clue */
+   static async daily(req, res) {
+      try {
+         const userId = req.user.id
+         const today = todayDate()
+
+         const existing = await db.QuizAttempt.findOne({
+            where: { user_id: userId, attempt_date: today }
+         })
+
+         if (existing) {
+            const clues = await getVignetteClues(existing.vignette_id)
+            const cluesRevealed = revealedClueCount(existing.clues_revealed)
+
+            return res.status(HttpStatusCode.Ok).json({
+               success: true,
+               data: {
+                  attempt_id: existing.id,
+                  vignette_id: existing.vignette_id,
+                  clues_revealed: cluesRevealed,
+                  is_completed: isCompleted(existing),
+                  is_correct: existing.is_correct,
+                  score: existing.score,
+                  clues: clues.map((clue) => clueSlotPayload(clue, cluesRevealed))
+               }
+            })
+         }
+
+         const vignette = await findUnattemptedVignette(userId)
+
+         if (!vignette) {
+            return res.status(HttpStatusCode.Ok).json({
+               success: true,
+               data: {
+                  message: EMPTY_QUIZ_MESSAGE,
+                  is_empty: true
+               }
+            })
+         }
+
+         const attempt = await createAttempt(userId, vignette.id)
+         const clues = await getVignetteClues(vignette.id)
+         const cluesRevealed = revealedClueCount(attempt.clues_revealed)
+
+         res.status(HttpStatusCode.Created).json({
+            success: true,
+            data: {
+               attempt_id: attempt.id,
+               vignette_id: vignette.id,
+               clues_revealed: cluesRevealed,
+               is_completed: false,
+               clues: clues.map((clue) => clueSlotPayload(clue, cluesRevealed))
+            }
+         })
+      } catch (err) {
+         console.log(err)
+         res
+            .status(
+               typeof err.code === 'number'
+                  ? err.code
+                  : HttpStatusCode.InternalServerError
+            )
+            .json({
+               success: false,
+               message: err.message
+            })
+      }
+   }
+
    static async revealClue(req, res) {
       try {
          const userId = req.user.id
          const { attempt_id } = req.body
+
          if (!attempt_id) {
             return res
                .status(HttpStatusCode.BadRequest)
@@ -215,48 +302,49 @@ class Controller {
                      {
                         model: db.Clue,
                         as: 'clues',
-                        attributes: ['clue_number', 'content', 'type'],
-                        order: [['clue_number', 'ASC']]
+                        attributes: ['clue_number', 'content', 'type']
                      }
                   ]
                }
             ]
          })
+
          if (!attempt) {
             return res
                .status(HttpStatusCode.NotFound)
                .json({ success: false, message: 'Attempt not found' })
          }
-         if (attempt.is_correct !== null) {
+
+         if (isCompleted(attempt)) {
             return res
                .status(HttpStatusCode.BadRequest)
                .json({ success: false, message: 'Attempt already completed' })
          }
-         if (attempt.clues_revealed >= MAX_CLUES) {
+
+         const currentCluesRevealed = revealedClueCount(attempt.clues_revealed)
+
+         if (currentCluesRevealed >= MAX_CLUES) {
             return res
                .status(HttpStatusCode.BadRequest)
                .json({ success: false, message: 'All clues already revealed' })
          }
 
-         attempt.clues_revealed += 1
+         const nextClueNumber = currentCluesRevealed + 1
+
+         attempt.clues_revealed = nextClueNumber
          await attempt.save()
 
-         const nextClue = attempt.vignette.clues.find(
-            (c) => c.clue_number === attempt.clues_revealed
+         const clues = [...attempt.vignette.clues].sort(
+            (a, b) => a.clue_number - b.clue_number
          )
+         const nextClue = clues.find((clue) => clue.clue_number === nextClueNumber)
 
          res.status(HttpStatusCode.Ok).json({
             success: true,
             data: {
                attempt_id: attempt.id,
                clues_revealed: attempt.clues_revealed,
-               clue: nextClue
-                  ? {
-                     clue_number: nextClue.clue_number,
-                     content: nextClue.content,
-                     type: nextClue.type
-                  }
-                  : null
+               clue: nextClue ? cluePayload(nextClue) : null
             }
          })
       } catch (err) {
@@ -274,11 +362,11 @@ class Controller {
       }
    }
 
-   /** POST /v1/quiz/submit-diagnosis — compare answer, assign score */
    static async submitDiagnosis(req, res) {
       try {
          const userId = req.user.id
          const { attempt_id, diagnosis } = req.body
+
          if (!attempt_id || !diagnosis) {
             return res.status(HttpStatusCode.BadRequest).json({
                success: false,
@@ -298,12 +386,14 @@ class Controller {
                }
             ]
          })
+
          if (!attempt) {
             return res
                .status(HttpStatusCode.NotFound)
                .json({ success: false, message: 'Attempt not found' })
          }
-         if (attempt.is_correct !== null) {
+
+         if (isCompleted(attempt)) {
             return res
                .status(HttpStatusCode.BadRequest)
                .json({ success: false, message: 'Attempt already completed' })
@@ -311,35 +401,23 @@ class Controller {
 
          const correctName = attempt.vignette.disease.name
          const isCorrect =
-        diagnosis.trim().toLowerCase() === correctName.trim().toLowerCase()
+            diagnosis.trim().toLowerCase() === correctName.trim().toLowerCase()
+         const cluesRevealed = revealedClueCount(attempt.clues_revealed)
 
          attempt.is_correct = isCorrect
          attempt.submitted_diagnosis = diagnosis
-         attempt.score = isCorrect ? scoreForClues(attempt.clues_revealed + 1) : 0
+         attempt.score = isCorrect ? scoreForClues(cluesRevealed) : 0
          await attempt.save()
 
-         // Update Redis Leaderboards
          if (isCorrect) {
             try {
-               if (!redisClient.isReady) await redisClient.connect()
-               await redisClient.zIncrBy('global_leaderboard', attempt.score, userId)
+               await updateLeaderboards(userId, attempt.score)
 
-               const groupMember = await db.GroupMember.findOne({
-                  where: { user_id: userId },
-                  attributes: ['group_id']
-               })
-               if (groupMember) {
-                  await redisClient.zIncrBy(
-                     `group_leaderboard:${groupMember.group_id}`,
-                     attempt.score,
-                     userId
-                  )
-               }
-
-               // Trigger AI explanation generation (fire-and-forget)
-               if (aiClient) {
+               if (process.env.SKIP_AI_EXPLANATIONS !== 'true') {
                   const diseaseId = attempt.vignette.disease_id
-                  generateExplanation(diseaseId, 'id').catch(console.error)
+                  generateExplanation(diseaseId, 'id').catch((error) => {
+                     console.error('AI explanation generation failed:', error.message)
+                  })
                }
             } catch (redisError) {
                console.error('Redis operation failed:', redisError.message)
@@ -353,7 +431,7 @@ class Controller {
                is_correct: isCorrect,
                correct_disease: correctName,
                score: attempt.score,
-               clues_revealed: attempt.clues_revealed
+               clues_revealed: cluesRevealed
             }
          })
       } catch (err) {
@@ -371,7 +449,6 @@ class Controller {
       }
    }
 
-   /** GET /v1/quiz/attempts/me — paginated attempt history */
    static async myAttempts(req, res) {
       try {
          const userId = req.user.id
@@ -407,16 +484,16 @@ class Controller {
                total_row: count,
                total_page: Math.ceil(count / limit)
             },
-            data: rows.map((a) => ({
-               id: a.id,
-               vignette_id: a.vignette_id,
-               disease_name: a.vignette?.disease?.name,
-               disease_icd: a.vignette?.disease?.icd_code,
-               clues_revealed: a.clues_revealed,
-               is_correct: a.is_correct,
-               score: a.score,
-               attempt_date: a.attempt_date,
-               submitted_diagnosis: a.submitted_diagnosis
+            data: rows.map((attempt) => ({
+               id: attempt.id,
+               vignette_id: attempt.vignette_id,
+               disease_name: attempt.vignette?.disease?.name,
+               disease_icd: attempt.vignette?.disease?.icd_code,
+               clues_revealed: attempt.clues_revealed,
+               is_correct: attempt.is_correct,
+               score: attempt.score,
+               attempt_date: attempt.attempt_date,
+               submitted_diagnosis: attempt.submitted_diagnosis
             }))
          })
       } catch (err) {

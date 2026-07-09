@@ -21,31 +21,27 @@ function api(res, code, { err = null, req = null } = {}) {
    let message = 'success'
 
    if (err && code !== HttpStatusCode.Ok) {
-      message = err.message
+      message =
+         code >= HttpStatusCode.InternalServerError
+            ? 'Internal server error'
+            : err.message
 
       // Handle Sequelize errors
-      if (err instanceof ValidationError) {
-         message = `Validation error: ${err.errors[0].message}`
-      } else if (err instanceof DatabaseError) {
-         const debugMode = ['local', 'development', 'staging']
-         message = debugMode.includes(process.env.NODE_ENV)
-            ? `Database error: ${err.original?.message || err.message}`
-            : 'Database error occurred'
-      } else if (err instanceof ForeignKeyConstraintError) {
-         message = 'Foreign key constraint violation'
-      } else if (err instanceof UniqueConstraintError) {
-         message = `Duplicate entry: ${
-            err.errors[0]?.path || 'unique constraint violated'
-         }`
+      if (
+         err instanceof UniqueConstraintError ||
+         err instanceof ForeignKeyConstraintError ||
+         err instanceof ValidationError ||
+         err instanceof DatabaseError
+      ) {
+         message = 'Terjadi kesalahan. Silakan coba lagi.'
       } else if (err instanceof ZodError) {
-      // Handle Zod validation errors
-         const firstError = err.errors[0]
+         const firstError = err.issues?.[0] || err.errors?.[0]
          message =
-        firstError.path.length > 0
-           ? `${firstError.path.join('.')}: ${firstError.message}`
-           : firstError.message
+            firstError && firstError.path.length > 0
+               ? `${firstError.path.join('.')}: ${firstError.message}`
+               : firstError?.message || err.message
       } else if (err.name === 'schema-validator' && Array.isArray(err)) {
-      // Handle custom validation errors
+         // Handle custom validation errors
          message = err[0].msg
       }
    } else if (res && typeof res === 'object' && 'data' in res) {
@@ -64,9 +60,9 @@ function api(res, code, { err = null, req = null } = {}) {
       res = res.data
    } else if (
       res &&
-    typeof res === 'object' &&
-    'rows' in res &&
-    'count' in res
+      typeof res === 'object' &&
+      'rows' in res &&
+      'count' in res
    ) {
       // Handle Sequelize pagination format
       const perPage = parseInt(req?.query?.per_page) || 10
@@ -83,7 +79,7 @@ function api(res, code, { err = null, req = null } = {}) {
    }
 
    return {
-      success: code === HttpStatusCode.Ok,
+      success: code >= 200 && code < 300,
       message: message,
       metadata: metadata,
       data: res

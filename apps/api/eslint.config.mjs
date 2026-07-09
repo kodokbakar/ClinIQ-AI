@@ -15,12 +15,13 @@ export default [
     ]
   },
   {
-    files: ["**/*.js"],
+    files: ["**/*.js", "**/*.test.js"],
     languageOptions: {
       sourceType: "commonjs",
       globals: {
         ...globals.node,
-        ...globals.es2021
+        ...globals.es2021,
+        ...globals.vitest,
       }
     },
     rules: {

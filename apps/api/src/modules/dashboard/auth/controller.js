@@ -48,9 +48,17 @@ class Controller {
             status: defaultStatus
          })
 
+         const result = {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            role_id: newUser.role_id,
+            status: newUser.status
+         }
+
          res
             .status(HttpStatusCode.Created)
-            .json(api.results(newUser, HttpStatusCode.Created, { req }))
+            .json(api.results(result, HttpStatusCode.Created, { req }))
       } catch (err) {
          err.code =
         typeof err.code !== 'undefined' && err.code !== null

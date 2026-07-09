@@ -19,8 +19,8 @@ class Controller {
             name,
             description: description || '',
             invite_code:
-          invite_code ||
-          Math.random().toString(36).substring(2, 10).toUpperCase(),
+               invite_code ||
+               Math.random().toString(36).substring(2, 10).toUpperCase(),
             owner_id: userId
          })
 
@@ -39,7 +39,8 @@ class Controller {
                description: group.description,
                invite_code: group.invite_code,
                owner_id: group.owner_id,
-               created_at: group.created_at
+               member_count: group.member_count,
+               created_at: group.createdAt
             }
          })
       } catch (err) {
@@ -68,7 +69,8 @@ class Controller {
                      'description',
                      'invite_code',
                      'owner_id',
-                     'created_at'
+                     'member_count',
+                     'createdAt'
                   ]
                }
             ],
@@ -114,15 +116,21 @@ class Controller {
          const group = await db.Group.findByPk(id, {
             include: [
                {
-                  model: db.User,
+                  model: db.GroupMember,
                   as: 'members',
-                  through: { attributes: ['is_admin', 'joined_at'] },
-                  attributes: ['id', 'username', 'email', 'full_name']
+                  attributes: ['id', 'user_id', 'is_admin', 'joined_at'],
+                  include: [
+                     {
+                        model: db.User,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email']
+                     }
+                  ]
                },
                {
                   model: db.User,
                   as: 'owner',
-                  attributes: ['id', 'username', 'email']
+                  attributes: ['id', 'name', 'email']
                }
             ]
          })
@@ -183,10 +191,23 @@ class Controller {
             })
          }
 
-         await db.GroupMember.create({
-            group_id: id,
-            user_id: userId,
-            is_admin: false
+         await db.sequelize.transaction(async (transaction) => {
+            await db.GroupMember.create(
+               {
+                  group_id: id,
+                  user_id: userId,
+                  is_admin: false
+               },
+               { transaction }
+            )
+
+            await db.sequelize.query(
+               'UPDATE groups SET member_count = member_count + 1 WHERE id = :id',
+               {
+                  replacements: { id },
+                  transaction
+               }
+            )
          })
 
          res.status(HttpStatusCode.Created).json({
@@ -194,6 +215,12 @@ class Controller {
             data: { message: 'Successfully joined group', group_id: id }
          })
       } catch (err) {
+         if (err.name === 'SequelizeUniqueConstraintError') {
+            return res.status(HttpStatusCode.Conflict).json({
+               success: false,
+               message: 'Already a member of this group'
+            })
+         }
          console.error('Join group error:', err)
          res.status(err.code || HttpStatusCode.InternalServerError).json({
             success: false,
@@ -228,7 +255,17 @@ class Controller {
             })
          }
 
-         await membership.destroy()
+         await db.sequelize.transaction(async (transaction) => {
+            await membership.destroy({ transaction })
+
+            await db.sequelize.query(
+               'UPDATE groups SET member_count = GREATEST(member_count - 1, 1) WHERE id = :id',
+               {
+                  replacements: { id },
+                  transaction
+               }
+            )
+         })
 
          res.status(HttpStatusCode.Ok).json({
             success: true,

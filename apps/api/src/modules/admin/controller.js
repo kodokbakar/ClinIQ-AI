@@ -1,12 +1,24 @@
 const db = require('../../../db/models')
 const { getAIClient } = require('../../config/ai')
-const aiClient = getAIClient()
 const { HttpStatusCode } = require('axios')
 const csv = require('csv-parser')
 const { Readable } = require('stream')
 const { deleteCache } = require('../../utils/redis')
 
 class Controller {
+   /** GET /v1/admin/me — Check current admin */
+   static async me(req, res) {
+      res.status(HttpStatusCode.Ok).json({
+         success: true,
+         data: {
+            id: req.user.id,
+            name: req.user.name,
+            email: req.user.email,
+            is_superadmin: req.user.is_superadmin
+         }
+      })
+   }
+
    /** POST /v1/admin/icd/upload — Upload ICD codes CSV */
    static async uploadICD(req, res) {
       try {
@@ -88,10 +100,13 @@ class Controller {
    /** POST /v1/admin/vignettes/generate — Generate vignette via AI */
    static async generateVignette(req, res) {
       try {
-         if (!aiClient) {
+         let aiClient
+         try {
+            aiClient = getAIClient()
+         } catch (err) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
-               message: 'AI service not configured. Set AI_API_KEY.'
+               message: err.message
             })
          }
 
@@ -121,7 +136,7 @@ class Controller {
                {
                   role: 'system',
                   content:
-              'You are a medical education expert creating clinical vignettes for medical students.'
+                     'You are a medical education expert creating clinical vignettes for medical students.'
                },
                { role: 'user', content: prompt }
             ],
@@ -159,10 +174,13 @@ class Controller {
    /** POST /v1/admin/vignettes/bulk — Bulk generate vignettes for diseases without them */
    static async bulkGenerate(req, res) {
       try {
-         if (!aiClient) {
+         let aiClient
+         try {
+            aiClient = getAIClient()
+         } catch (err) {
             return res.status(HttpStatusCode.ServiceUnavailable).json({
                success: false,
-               message: 'AI service not configured'
+               message: err.message
             })
          }
 
@@ -192,7 +210,7 @@ class Controller {
                      {
                         role: 'system',
                         content:
-                  'You are a medical education expert creating clinical vignettes.'
+                           'You are a medical education expert creating clinical vignettes.'
                      },
                      { role: 'user', content: prompt }
                   ],

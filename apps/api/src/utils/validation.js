@@ -2,7 +2,15 @@ const { ZodError } = require('zod')
 const { HttpStatusCode } = require('axios')
 
 const validateRequest = (schema, req) => {
-   return schema.parse(req.body)
+   try {
+      return schema.parse(req.body)
+   } catch (err) {
+      if (err instanceof ZodError) {
+         err.code = HttpStatusCode.BadRequest
+      }
+
+      throw err
+   }
 }
 
 const validationFiles = (files, validationRules) => {

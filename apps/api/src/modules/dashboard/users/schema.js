@@ -14,11 +14,18 @@ const UserUpdateSchema = z.object({
 
 const ResetPasswordSchema = z
    .object({
-      password: z.string().min(6, 'Password minimal 6 karakter'),
-      confirm_password: z.string().min(6, 'Password minimal 6 karakter')
+      password: z
+         .string()
+         .min(8, 'Password minimal 8 karakter')
+         .regex(
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+            'Password harus mengandung huruf kecil, huruf besar, dan angka'
+         ),
+      confirm_password: z.string().min(1, 'Konfirmasi password tidak boleh kosong')
    })
    .refine((data) => data.password === data.confirm_password, {
-      message: 'Password dan konfirmasi password tidak cocok'
+      message: 'Password dan konfirmasi password tidak cocok',
+      path: ['confirm_password']
    })
 
 const UpdateUserAccessSchema = z.object({

@@ -15,7 +15,7 @@ class Controller {
    static async listUser(req, res) {
       try {
          const user = req.user
-         const limit = parseInt(req.query.per_page) || 10
+         const limit = parseInt(req.query.per_page || req.query.limit) || 10
          const page = parseInt(req.query.page) || 1
          const q = req.query.q || null
 
@@ -79,9 +79,9 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
@@ -107,9 +107,11 @@ class Controller {
          }
 
          const result = {
-            id: user.id,
-            name: user.name,
-            email: user.email
+            id: checkUser.id,
+            name: checkUser.name,
+            email: checkUser.email,
+            status: checkUser.status,
+            role_id: checkUser.role_id
          }
 
          res
@@ -118,16 +120,15 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
 
    static async createUser(req, res) {
       try {
-         const user = req.user
          const data = validateRequest(UserCreateSchema, req)
          const checkUser = await db.user.findOne({
             where: {
@@ -168,22 +169,29 @@ class Controller {
             password: passwordHash
          })
 
+         const result = {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            role_id: newUser.role_id,
+            status: newUser.status
+         }
+
          res
-            .status(HttpStatusCode.Ok)
-            .json(api.results(newUser, HttpStatusCode.Ok, { req }))
+            .status(HttpStatusCode.Created)
+            .json(api.results(result, HttpStatusCode.Created, { req }))
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
 
    static async updateUser(req, res) {
       try {
-         const user = req.user
          const userId = req.params.user_id
          if (!uuid.validate(userId)) {
             throw {
@@ -233,16 +241,15 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
 
    static async deleteUser(req, res) {
       try {
-         const user = req.user
          const userId = req.params.user_id
          if (!uuid.validate(userId)) {
             throw {
@@ -268,9 +275,9 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
@@ -298,7 +305,8 @@ class Controller {
 
          const passwordHash = bcrypt.hashPassword(data.password)
          await existUser.update({
-            password: passwordHash
+            password: passwordHash,
+            last_updated_password: new Date()
          })
 
          res
@@ -307,9 +315,9 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
@@ -392,9 +400,9 @@ class Controller {
          console.log(err)
          await t.rollback()
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
