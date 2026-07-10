@@ -30,14 +30,14 @@ describe("Login page", () => {
     expect(
       screen.queryByRole("heading", {
         level: 1,
-        name: /masuk ke ruang kerja yang lebih tenang/i,
+        name: /masuk ke ruang diagnosis/i,
       }),
     ).toBeTruthy();
 
     expect(screen.queryByLabelText("Email")).toBeTruthy();
     expect(screen.queryByLabelText("Password")).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /masuk ke workspace/i }),
+      screen.queryByRole("button", { name: /masuk dan lanjut belajar/i }),
     ).toBeTruthy();
   });
 
@@ -55,7 +55,7 @@ describe("Login page", () => {
     render(<LoginPage />);
 
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "dok@@klinik.id" },
+      target: { value: "dok@@email.com" },
     });
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "Password123" },
@@ -74,7 +74,7 @@ describe("Login page", () => {
         data: {
           id: "user-1",
           name: "Dok Bakar",
-          email: "dok@klinik.id",
+          email: "dok@email.com",
           is_superadmin: false,
         },
       }),
@@ -83,7 +83,7 @@ describe("Login page", () => {
     render(<LoginPage />);
 
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "dok@klinik.id" },
+      target: { value: "dok@email.com" },
     });
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "Password123" },
@@ -99,12 +99,12 @@ describe("Login page", () => {
       RequestInit,
     ];
 
-    expect(url).toContain("/api/dashboard/auth/login");
+    expect(url).toContain("/api/v1/auth/login");
     expect(options.method).toBe("POST");
     expect(options.credentials).toBe("include");
     expect(options.body).toBe(
       JSON.stringify({
-        email: "dok@klinik.id",
+        email: "dok@email.com",
         password: "Password123",
       }),
     );
@@ -127,7 +127,7 @@ describe("Login page", () => {
     render(<LoginPage />);
 
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "wrong@klinik.id" },
+      target: { value: "wrong@email.com" },
     });
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "wrong-password" },

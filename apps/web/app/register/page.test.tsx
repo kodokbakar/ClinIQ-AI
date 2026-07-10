@@ -30,7 +30,7 @@ describe("Register page", () => {
     expect(
       screen.queryByRole("heading", {
         level: 1,
-        name: /bentuk klinik digital yang terasa manusiawi/i,
+        name: /bangun naluri klinismu/i,
       }),
     ).toBeTruthy();
 
@@ -39,7 +39,7 @@ describe("Register page", () => {
     expect(screen.queryByLabelText("Password")).toBeTruthy();
     expect(screen.queryByLabelText("Konfirmasi password")).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /daftar workspace/i }),
+      screen.queryByRole("button", { name: /buat akun belajar/i }),
     ).toBeTruthy();
   });
 
@@ -64,7 +64,7 @@ describe("Register page", () => {
       target: { value: "Ari Purnama" },
     });
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "ari@@klinik.id" },
+      target: { value: "ari@@email.com" },
     });
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "Password123" },
@@ -78,28 +78,24 @@ describe("Register page", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("validates password strength and confirmation match", () => {
+  it("validates password length and confirmation match", () => {
     render(<RegisterPage />);
 
     fireEvent.change(screen.getByLabelText("Nama lengkap"), {
       target: { value: "Ari" },
     });
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "ari@klinik.id" },
+      target: { value: "ari@email.com" },
     });
     fireEvent.change(screen.getByLabelText("Password"), {
-      target: { value: "password" },
+      target: { value: "12345" },
     });
     fireEvent.change(screen.getByLabelText("Konfirmasi password"), {
       target: { value: "different" },
     });
     fireEvent.submit(screen.getByTestId("register-form"));
 
-    expect(
-      screen.queryByText(
-        "Password harus mengandung huruf kecil, huruf besar, dan angka.",
-      ),
-    ).toBeTruthy();
+    expect(screen.queryByText("Password minimal 6 karakter.")).toBeTruthy();
     expect(screen.queryByText("Konfirmasi password tidak cocok.")).toBeTruthy();
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -112,8 +108,8 @@ describe("Register page", () => {
         data: {
           id: "user-2",
           name: "Ari Purnama",
-          email: "ari@klinik.id",
-          is_superadmin: false,
+          email: "ari@email.com",
+          status: true,
         },
       }),
     );
@@ -124,7 +120,7 @@ describe("Register page", () => {
       target: { value: "Ari Purnama" },
     });
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "ari@klinik.id" },
+      target: { value: "ari@email.com" },
     });
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "Password123" },
@@ -143,15 +139,14 @@ describe("Register page", () => {
       RequestInit,
     ];
 
-    expect(url).toContain("/api/dashboard/auth/register");
+    expect(url).toContain("/api/v1/auth");
     expect(options.method).toBe("POST");
     expect(options.credentials).toBe("include");
     expect(options.body).toBe(
       JSON.stringify({
         name: "Ari Purnama",
-        email: "ari@klinik.id",
+        email: "ari@email.com",
         password: "Password123",
-        confirm_password: "Password123",
       }),
     );
 
@@ -163,7 +158,7 @@ describe("Register page", () => {
       mockApiResponse(
         {
           success: false,
-          message: "Email already registered",
+          message: "User already registered",
           data: null,
         },
         false,
@@ -176,7 +171,7 @@ describe("Register page", () => {
       target: { value: "Ari Purnama" },
     });
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "ari@klinik.id" },
+      target: { value: "ari@email.com" },
     });
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "Password123" },
@@ -190,7 +185,7 @@ describe("Register page", () => {
       expect(screen.queryByRole("alert")).toBeTruthy();
     });
 
-    expect(screen.queryByText("Email already registered")).toBeTruthy();
+    expect(screen.queryByText("User already registered")).toBeTruthy();
     expect(pushMock).not.toHaveBeenCalled();
   });
 });
