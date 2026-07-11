@@ -56,7 +56,7 @@ describe("DashboardSidebar", () => {
   });
 
   it("opens account menu", () => {
-    render(<DashboardSidebar />);
+    render(<DashboardSidebar />);   
 
     fireEvent.click(screen.getByRole("button", { name: /akun/i }));
 
