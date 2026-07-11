@@ -60,7 +60,7 @@ function listItems(items?: string[] | null) {
 }
 
 export function QuizClient({ initialMode }: QuizClientProps) {
-  const { replace } = useRouter();
+  const { push, replace } = useRouter();
   const copy = modeCopy[initialMode];
   const [quiz, setQuiz] = useState<QuizAttempt | null>(null);
   const [isEmpty, setIsEmpty] = useState(false);
@@ -297,24 +297,25 @@ export function QuizClient({ initialMode }: QuizClientProps) {
   return (
     <main className="quiz-screen px-3 py-3 sm:px-5 sm:py-5">
       <section className="quiz-shell">
-        <header className="quiz-hero">
-          <div>
-            <Link href="/dashboard" className="quiz-back-link">
-              ← Kembali ke dashboard
-            </Link>
+        <header className="quiz-navbar">
+          <button
+            type="button"
+            onClick={() => push("/dashboard")}
+            className="quiz-back-button"
+          >
+            <span aria-hidden="true">←</span>
+            Back to dashboard
+          </button>
+
+          <div className="quiz-navbar__copy">
             <p className="diagnostic-eyebrow">{copy.eyebrow}</p>
             <h1>{copy.title}</h1>
             <p>{copy.description}</p>
           </div>
 
-          <div className="quiz-mode-card" aria-label="Mode quiz aktif">
+          <div className="quiz-mode-pill" aria-label="Mode quiz aktif">
             <span>mode</span>
             <strong>{initialMode}</strong>
-            <small>
-              {initialMode === "daily"
-                ? "Resume today's attempt"
-                : "Fresh unattempted vignette"}
-            </small>
           </div>
         </header>
 

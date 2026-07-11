@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { QuizClient } from "../_components/quiz/quiz-client";
 import type { QuizMode } from "../_lib/quiz-api";
+import "./quiz.css";
 
 type QuizSearchParams = {
   mode?: string | string[];
