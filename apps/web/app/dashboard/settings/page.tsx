@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentUser, type AuthUser } from "../../_lib/auth-api";
+import "./settings.css";
 
 function formatDate(value?: string | null): string {
   if (!value) return "Belum pernah diperbarui";

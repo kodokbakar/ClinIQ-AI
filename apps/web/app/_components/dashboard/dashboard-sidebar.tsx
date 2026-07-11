@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { logoutUser } from "../../_lib/auth-api";
+import "./dashboard-sidebar.css";
 
 const links = [
   { href: "/dashboard", label: "Study Desk", meta: "Overview" },

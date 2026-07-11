@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getCurrentUser, type AuthUser } from "../_lib/auth-api";
 import { getMyAttempts, type QuizAttemptHistory } from "../_lib/quiz-api";
+import "./dashboard-home.css";
 
 const scoreFormatter = new Intl.NumberFormat("id-ID");
 

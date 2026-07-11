@@ -1,0 +1,74 @@
+.diagnostic-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 3rem);
+  align-items: end;
+  overflow: hidden;
+  border: 1px solid var(--auth-line);
+  border-radius: var(--auth-radius-soft);
+  background: rgba(255, 249, 238, 0.82);
+  padding: clamp(1.1rem, 3vw, 3rem);
+  animation: auth-rise 720ms var(--auth-ease-out) both;
+}
+
+.diagnostic-hero h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: var(--font-display), serif;
+  font-size: clamp(4.4rem, 8.5vw, 8.6rem);
+  font-weight: 900;
+  line-height: 0.78;
+  letter-spacing: -0.09em;
+}
+
+.diagnostic-hero p {
+  max-width: 48rem;
+  margin: 1.35rem 0 0;
+  color: var(--auth-ink-soft);
+  font-size: clamp(1rem, 0.96rem + 0.35vw, 1.22rem);
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.settings-record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+}
+
+.settings-record {
+  border: 1px solid var(--auth-line);
+  border-radius: 1rem;
+  background: rgba(255, 249, 238, 0.56);
+  padding: 1rem;
+}
+
+.settings-record dt {
+  color: var(--auth-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.settings-record dd {
+  margin: 0.45rem 0 0;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .diagnostic-hero {
+    border-radius: 1.1rem;
+  }
+
+  .settings-record-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-hero h1 {
+    font-size: clamp(4rem, 18vw, 6.4rem);
+  }
+}
