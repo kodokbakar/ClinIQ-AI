@@ -1,0 +1,48 @@
+.auth-screen--login {
+  background:
+    linear-gradient(rgba(31, 36, 33, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 36, 33, 0.035) 1px, transparent 1px),
+    radial-gradient(
+      circle at 8% 12%,
+      rgba(27, 60, 255, 0.15),
+      transparent 26rem
+    ),
+    radial-gradient(
+      circle at 88% 14%,
+      rgba(241, 90, 36, 0.14),
+      transparent 28rem
+    ),
+    linear-gradient(135deg, var(--auth-paper), var(--auth-paper-warm));
+  background-size:
+    34px 34px,
+    34px 34px,
+    auto,
+    auto,
+    auto;
+}
+
+.auth-screen--login .auth-poster {
+  background:
+    radial-gradient(
+      circle at 82% 18%,
+      rgba(255, 249, 238, 0.18),
+      transparent 12rem
+    ),
+    linear-gradient(135deg, var(--auth-teal), var(--auth-teal-dark));
+}
+
+.auth-screen--login .auth-brand__mark {
+  background: var(--auth-blue);
+}
+
+.auth-screen--login .auth-submit::after {
+  background: var(--auth-blue);
+}
+
+.auth-screen--login .auth-poster__badge {
+  background: var(--auth-blue);
+}
+
+.auth-screen--login .auth-poster__title span {
+  color: #8bd8d4;
+}

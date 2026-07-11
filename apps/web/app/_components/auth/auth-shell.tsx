@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+type AuthVariant = "login" | "register";
+
 type AuthShellProps = {
+  variant: AuthVariant;
   eyebrow: string;
   title: string;
   description: string;
@@ -33,6 +36,7 @@ const clues = [
 ];
 
 export function AuthShell({
+  variant,
   eyebrow,
   title,
   description,
@@ -42,7 +46,7 @@ export function AuthShell({
   alternateLabel,
 }: AuthShellProps) {
   return (
-    <main className="auth-screen">
+    <main className={`auth-screen auth-screen--${variant}`}>
       <div className="auth-page">
         <section className="auth-panel" aria-labelledby="auth-title">
           <div>
