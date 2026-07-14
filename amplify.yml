@@ -9,7 +9,7 @@ applications:
             - cd ../.. && bun install
         build:
           commands:
-            - cd ../.. && bunx turbo run build --filter=web
+            - bunx turbo run build --filter=web --cwd=../..
       artifacts:
         baseDirectory: .next
         files:
