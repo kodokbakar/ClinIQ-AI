@@ -12,7 +12,7 @@ applications:
           commands:
             - bunx turbo run build --filter=web
       artifacts:
-        baseDirectory: .next/standalone/apps/web/.next
+        baseDirectory: .next/standalone/apps/web
         files:
           - '**/*'
         secondaryArtifacts:
