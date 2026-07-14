@@ -9,7 +9,9 @@ applications:
             - bun install
         build:
           commands:
+            - bun install
             - bunx turbo run build --filter=web
+            - cp -r node_modules apps/web/node_modules
       artifacts:
         baseDirectory: apps/web/.next
         files:
