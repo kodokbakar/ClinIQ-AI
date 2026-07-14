@@ -1,7 +1,7 @@
 version: 1
 applications:
-  - frontend:
-      buildPath: '/'
+  - appRoot:: apps/web
+    frontend:
       phases:
         preBuild:
           commands:
@@ -9,14 +9,12 @@ applications:
             - bun install
         build:
           commands:
-            - bun install
             - bunx turbo run build --filter=web
-            - cp -r node_modules apps/web/node_modules
       artifacts:
-        baseDirectory: apps/web/.next
+        baseDirectory: .next
         files:
           - '**/*'
       cache:
         paths:
           - node_modules/**/*
-    appRoot: apps/web
+          - .next/cache/**/*
