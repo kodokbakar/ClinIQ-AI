@@ -20,8 +20,6 @@ function validateRegister(
 
   if (!name) {
     errors.name = "Nama tidak boleh kosong.";
-  } else if (name.length < 2) {
-    errors.name = "Nama minimal 2 karakter.";
   }
 
   if (!email) {
@@ -32,11 +30,8 @@ function validateRegister(
 
   if (!password) {
     errors.password = "Password tidak boleh kosong.";
-  } else if (password.length < 8) {
-    errors.password = "Password minimal 8 karakter.";
-  } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-    errors.password =
-      "Password harus mengandung huruf kecil, huruf besar, dan angka.";
+  } else if (password.length < 6) {
+    errors.password = "Password minimal 6 karakter.";
   }
 
   if (!confirmPassword) {
@@ -70,18 +65,11 @@ export function RegisterForm() {
     );
     setErrors(validationErrors);
 
-    if (Object.keys(validationErrors).length > 0) {
-      return;
-    }
+    if (Object.keys(validationErrors).length > 0) return;
 
     try {
       setIsSubmitting(true);
-      await registerUser({
-        name,
-        email,
-        password,
-        confirm_password: confirmPassword,
-      });
+      await registerUser({ name, email, password });
       router.push("/login?registered=1");
     } catch (error) {
       setErrors({
@@ -99,14 +87,11 @@ export function RegisterForm() {
     <form
       data-testid="register-form"
       onSubmit={handleSubmit}
-      className="space-y-5"
+      className="auth-form"
       noValidate
     >
       {errors.form ? (
-        <div
-          role="alert"
-          className="rounded-[1.25rem] border border-[rgba(123,99,118,0.24)] bg-[rgba(201,183,195,0.35)] px-5 py-4 text-sm font-extrabold text-[var(--ink)]"
-        >
+        <div role="alert" className="auth-alert">
           {errors.form}
         </div>
       ) : null}
@@ -116,7 +101,7 @@ export function RegisterForm() {
         name="name"
         type="text"
         autoComplete="name"
-        placeholder="dr. Maya Raharja"
+        placeholder="Ari Purnama"
         error={errors.name}
       />
 
@@ -125,7 +110,7 @@ export function RegisterForm() {
         name="email"
         type="email"
         autoComplete="email"
-        placeholder="nama@klinik.id"
+        placeholder="ari@email.com"
         error={errors.email}
       />
 
@@ -134,7 +119,7 @@ export function RegisterForm() {
         name="password"
         type="password"
         autoComplete="new-password"
-        placeholder="Minimal 8 karakter"
+        placeholder="Minimal 6 karakter"
         error={errors.password}
       />
 
@@ -147,12 +132,8 @@ export function RegisterForm() {
         error={errors.confirm_password}
       />
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="focus-clay clay-button inline-flex w-full items-center justify-center rounded-full bg-[var(--fig)] px-7 py-4 text-base font-black text-[var(--cream)] disabled:cursor-not-allowed disabled:opacity-65"
-      >
-        {isSubmitting ? "Membuat workspace..." : "Daftar workspace"}
+      <button type="submit" disabled={isSubmitting} className="auth-submit">
+        {isSubmitting ? "Membuat akun..." : "Buat akun belajar"}
       </button>
     </form>
   );

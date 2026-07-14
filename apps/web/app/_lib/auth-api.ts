@@ -32,7 +32,6 @@ export type RegisterPayload = {
   name: string;
   email: string;
   password: string;
-  confirm_password: string;
 };
 
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(
@@ -51,7 +50,7 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
     throw new Error(result.message || "Permintaan gagal diproses.");
   }
 
-  if (!result.data) {
+  if (result.data === null) {
     throw new Error(result.message || "Respons server tidak valid.");
   }
 
@@ -76,19 +75,19 @@ async function requestJson<T>(
 }
 
 export function loginUser(payload: LoginPayload): Promise<AuthUser> {
-  return requestJson<AuthUser>("/api/dashboard/auth/login", payload);
+  return requestJson<AuthUser>("/api/v1/auth/login", payload);
 }
 
 export function registerUser(payload: RegisterPayload): Promise<AuthUser> {
-  return requestJson<AuthUser>("/api/dashboard/auth/register", payload);
+  return requestJson<AuthUser>("/api/v1/auth", payload);
 }
 
 export function logoutUser(): Promise<boolean> {
-  return requestJson<boolean>("/api/dashboard/auth/logout", {});
+  return requestJson<boolean>("/api/v1/auth/logout", {});
 }
 
 export async function getCurrentUser(): Promise<AuthUser> {
-  const response = await fetch(`${API_BASE_URL}/api/dashboard/auth/me`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
     headers: {
       Accept: "application/json",
     },

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Nunito_Sans } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -8,16 +8,24 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-const nunitoSans = Nunito_Sans({
+const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-body",
   display: "swap",
 });
 
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "clinIQ AI — Asisten klinik yang lebih tenang",
+  title: "clinIQ AI — Diagnostic Quiz Learning",
   description:
-    "Ruang kerja AI yang membantu klinik merapikan intake pasien, catatan triase, dan ringkasan kunjungan.",
+    "A medical quiz app that helps learners identify illnesses from clinical clues, then explains the reasoning with AI feedback.",
 };
 
 export default function RootLayout({
@@ -27,7 +35,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${fraunces.variable} ${nunitoSans.variable}`}>
+      <body
+        className={`${fraunces.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}
+      >
         {children}
       </body>
     </html>

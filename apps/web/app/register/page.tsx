@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import { AuthShell } from "../_components/auth/auth-shell";
 import { RegisterForm } from "../_components/auth/register-form";
+import "../_components/auth/auth.css";
+import "./register.css";
 
 export const metadata: Metadata = {
   title: "Daftar — clinIQ AI",
-  description: "Buat workspace baru di clinIQ AI.",
+  description: "Buat akun belajar diagnosis di clinIQ AI.",
 };
 
 export default function RegisterPage() {
   return (
     <AuthShell
-      eyebrow="workspace baru"
-      title="Bentuk klinik digital yang terasa manusiawi."
-      description="Buat akses awal untuk mulai merapikan intake pasien, catatan triase, dan ringkasan kunjungan dengan alur yang lebih lembut."
+      variant="register"
+      eyebrow="new learner"
+      title="Bangun naluri klinismu."
+      description="Buat akun untuk berlatih memahami penyakit dari petunjuk kasus, menguji hipotesis, dan membaca penjelasan AI yang lebih masuk akal."
       alternateText="Sudah punya akun?"
       alternateHref="/login"
       alternateLabel="Masuk sekarang"

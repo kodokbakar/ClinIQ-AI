@@ -1,0 +1,52 @@
+.auth-screen--register {
+  background:
+    linear-gradient(rgba(31, 36, 33, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 36, 33, 0.035) 1px, transparent 1px),
+    radial-gradient(
+      circle at 9% 10%,
+      rgba(241, 90, 36, 0.2),
+      transparent 28rem
+    ),
+    radial-gradient(
+      circle at 88% 16%,
+      rgba(15, 95, 92, 0.18),
+      transparent 30rem
+    ),
+    linear-gradient(135deg, var(--auth-paper), var(--auth-paper-warm));
+  background-size:
+    34px 34px,
+    34px 34px,
+    auto,
+    auto,
+    auto;
+}
+
+.auth-screen--register .auth-poster {
+  background:
+    radial-gradient(
+      circle at 82% 18%,
+      rgba(255, 249, 238, 0.18),
+      transparent 12rem
+    ),
+    linear-gradient(135deg, var(--auth-orange), var(--auth-orange-dark));
+}
+
+.auth-screen--register .auth-brand__mark {
+  background: var(--auth-orange);
+}
+
+.auth-screen--register .auth-submit::after {
+  background: var(--auth-teal);
+}
+
+.auth-screen--register .auth-poster__badge {
+  background: var(--auth-ink);
+}
+
+.auth-screen--register .auth-ai-card__mark {
+  background: var(--auth-teal-dark);
+}
+
+.auth-screen--register .auth-poster__title span {
+  color: var(--auth-ink);
+}

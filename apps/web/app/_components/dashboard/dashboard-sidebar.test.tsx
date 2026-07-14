@@ -21,6 +21,40 @@ describe("DashboardSidebar", () => {
     logoutUserMock.mockReset();
   });
 
+  it("toggles mobile dashboard menu", () => {
+    render(<DashboardSidebar />);
+
+    const menuButton = screen.getByRole("button", {
+      name: /buka menu dashboard/i,
+    });
+    const sidebar = screen.getByRole("complementary");
+
+    expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    expect(sidebar).toHaveAttribute("data-menu-open", "false");
+
+    fireEvent.click(menuButton);
+
+    expect(menuButton).toHaveAttribute("aria-expanded", "true");
+    expect(sidebar).toHaveAttribute("data-menu-open", "true");
+  });
+
+  it("closes mobile menu with Escape", () => {
+    render(<DashboardSidebar />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /buka menu dashboard/i,
+      }),
+    );
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.getByRole("complementary")).toHaveAttribute(
+      "data-menu-open",
+      "false",
+    );
+  });
+
   it("opens account menu", () => {
     render(<DashboardSidebar />);
 

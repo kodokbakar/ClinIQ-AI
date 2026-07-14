@@ -39,9 +39,7 @@ export function LoginForm() {
     const validationErrors = validateLogin(email, password);
     setErrors(validationErrors);
 
-    if (Object.keys(validationErrors).length > 0) {
-      return;
-    }
+    if (Object.keys(validationErrors).length > 0) return;
 
     try {
       setIsSubmitting(true);
@@ -63,14 +61,11 @@ export function LoginForm() {
     <form
       data-testid="login-form"
       onSubmit={handleSubmit}
-      className="space-y-5"
+      className="auth-form"
       noValidate
     >
       {errors.form ? (
-        <div
-          role="alert"
-          className="rounded-[1.25rem] border border-[rgba(123,99,118,0.24)] bg-[rgba(201,183,195,0.35)] px-5 py-4 text-sm font-extrabold text-[var(--ink)]"
-        >
+        <div role="alert" className="auth-alert">
           {errors.form}
         </div>
       ) : null}
@@ -80,7 +75,7 @@ export function LoginForm() {
         name="email"
         type="email"
         autoComplete="email"
-        placeholder="nama@klinik.id"
+        placeholder="nama@email.com"
         error={errors.email}
       />
 
@@ -93,12 +88,8 @@ export function LoginForm() {
         error={errors.password}
       />
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="focus-clay clay-button inline-flex w-full items-center justify-center rounded-full bg-[var(--fig)] px-7 py-4 text-base font-black text-[var(--cream)] disabled:cursor-not-allowed disabled:opacity-65"
-      >
-        {isSubmitting ? "Memeriksa sesi..." : "Masuk ke workspace"}
+      <button type="submit" disabled={isSubmitting} className="auth-submit">
+        {isSubmitting ? "Memeriksa sesi..." : "Masuk dan lanjut belajar"}
       </button>
     </form>
   );

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentUser, type AuthUser } from "../../_lib/auth-api";
+import "./settings.css";
 
 function formatDate(value?: string | null): string {
   if (!value) return "Belum pernah diperbarui";
@@ -11,6 +12,10 @@ function formatDate(value?: string | null): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function getRoleName(user: AuthUser): string {
+  return user.role?.name ?? (user.is_superadmin ? "Superadmin" : "User");
 }
 
 export default function SettingsPage() {
@@ -39,56 +44,51 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <section className="clay-panel rounded-[2.4rem] p-8">
-        <p className="text-sm font-black uppercase tracking-[0.22em] text-[var(--muted)]">
-          Memuat pengaturan
-        </p>
-        <h1 className="mt-4 font-[var(--font-display)] text-5xl font-semibold tracking-[-0.06em]">
-          Mengambil profil...
-        </h1>
+      <section className="diagnostic-panel diagnostic-loading">
+        <p className="diagnostic-eyebrow">Memuat pengaturan</p>
+        <h1>Mengambil profil...</h1>
       </section>
     );
   }
 
   if (!user) return null;
 
+  const roleName = getRoleName(user);
+
   return (
-    <section className="grid gap-6">
-      <div className="clay-panel rounded-[2.4rem] p-6 sm:p-8 lg:p-10">
-        <p className="mb-5 inline-flex rounded-full bg-[rgba(154,170,131,0.34)] px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[var(--absinthe-deep)] shadow-[inset_4px_4px_10px_rgba(80,97,71,0.12),inset_-4px_-4px_10px_rgba(255,255,237,0.8)]">
-          pengaturan akun
-        </p>
-        <h1 className="font-[var(--font-display)] text-5xl font-semibold leading-[0.94] tracking-[-0.07em] sm:text-6xl">
-          Kelola profil dasar.
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)]">
-          Data ini dibaca dari sesi backend. Edit profil dan ganti password bisa
-          ditambahkan setelah endpoint update profil dipastikan stabil.
-        </p>
+    <section className="dashboard-grid">
+      <div className="diagnostic-hero diagnostic-hero--compact">
+        <div>
+          <p className="diagnostic-eyebrow">account record</p>
+          <h1>Profil belajar dan sesi.</h1>
+          <p>
+            Data ini dibaca dari sesi backend. Untuk sekarang dashboard hanya
+            menampilkan profil; edit profil bisa ditambahkan setelah endpoint
+            update tersedia.
+          </p>
+        </div>
       </div>
 
-      <section className="clay-panel rounded-[2.4rem] p-6">
-        <h2 className="font-[var(--font-display)] text-4xl font-semibold tracking-[-0.06em]">
-          Informasi akun
-        </h2>
+      <section className="diagnostic-panel">
+        <div className="diagnostic-section-head">
+          <div>
+            <p className="diagnostic-eyebrow">identity</p>
+            <h2>Informasi akun.</h2>
+          </div>
+        </div>
 
-        <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+        <dl className="settings-record-grid">
           {[
             ["Nama", user.name],
             ["Email", user.email],
-            [
-              "Role",
-              user.role?.name ?? (user.is_superadmin ? "Superadmin" : "User"),
-            ],
+            ["Role", roleName],
             ["Status", user.status === false ? "Tidak aktif" : "Aktif"],
             ["User ID", user.id],
             ["Password diperbarui", formatDate(user.last_updated_password)],
           ].map(([label, value]) => (
-            <div key={label} className="clay-inset rounded-[1.5rem] p-4">
-              <dt className="text-xs font-black uppercase tracking-[0.18em] text-[var(--muted)]">
-                {label}
-              </dt>
-              <dd className="mt-2 break-words font-black">{value}</dd>
+            <div key={label} className="settings-record">
+              <dt>{label}</dt>
+              <dd>{value}</dd>
             </div>
           ))}
         </dl>

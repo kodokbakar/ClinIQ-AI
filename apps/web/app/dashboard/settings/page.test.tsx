@@ -32,7 +32,7 @@ describe("Settings page", () => {
         data: {
           id: "user-1",
           name: "Dok Bakar",
-          email: "dok@klinik.id",
+          email: "dok@email.com",
           status: true,
           avatar: null,
           role_id: "role-1",
@@ -46,11 +46,11 @@ describe("Settings page", () => {
     render(<SettingsPage />);
 
     await waitFor(() => {
-      expect(screen.queryByText("Kelola profil dasar.")).toBeTruthy();
+      expect(screen.queryByText("Profil belajar dan sesi.")).toBeTruthy();
     });
 
     expect(screen.queryByText("Dok Bakar")).toBeTruthy();
-    expect(screen.queryByText("dok@klinik.id")).toBeTruthy();
+    expect(screen.queryByText("dok@email.com")).toBeTruthy();
     expect(screen.queryAllByText("User").length).toBeGreaterThan(0);
     expect(replaceMock).not.toHaveBeenCalled();
   });

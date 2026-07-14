@@ -10,22 +10,19 @@ export function AuthField({ label, error, id, ...props }: AuthFieldProps) {
   const errorId = error && inputId ? `${inputId}-error` : undefined;
 
   return (
-    <div className="space-y-2">
-      <label
-        htmlFor={inputId}
-        className="block text-sm font-black text-[var(--ink)]"
-      >
+    <div className="auth-field">
+      <label htmlFor={inputId} className="auth-field__label">
         {label}
       </label>
       <input
         id={inputId}
         aria-invalid={Boolean(error)}
         aria-describedby={errorId}
-        className="focus-clay w-full rounded-[1.25rem] border border-[rgba(86,71,45,0.08)] bg-[rgba(238,226,201,0.74)] px-5 py-4 text-base font-bold text-[var(--ink)] shadow-[inset_7px_7px_16px_rgba(99,80,52,0.18),inset_-7px_-7px_16px_rgba(255,252,237,0.82)] outline-none placeholder:text-[rgba(112,104,86,0.62)]"
+        className="auth-field__input"
         {...props}
       />
       {error ? (
-        <p id={errorId} className="text-sm font-extrabold text-[var(--fig)]">
+        <p id={errorId} className="auth-field__error">
           {error}
         </p>
       ) : null}
