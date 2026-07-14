@@ -5,6 +5,7 @@ applications:
       phases:
         preBuild:
           commands:
+            - npm install -g bun
             - cd ../..
             - bun install
         build:
