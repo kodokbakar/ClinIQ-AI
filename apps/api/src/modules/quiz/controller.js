@@ -455,26 +455,53 @@ class Controller {
          const page = Math.max(parseInt(req.query.page) || 1, 1)
          const limit = Math.min(parseInt(req.query.limit) || 10, 50)
          const offset = (page - 1) * limit
+         const userWhere = { user_id: userId }
 
-         const { count, rows } = await db.QuizAttempt.findAndCountAll({
-            where: { user_id: userId },
-            include: [
-               {
-                  model: db.QuizVignette,
-                  as: 'vignette',
-                  include: [
-                     {
-                        model: db.Disease,
-                        as: 'disease',
-                        attributes: ['name', 'icd_code']
-                     }
-                  ]
+         const [
+            attemptsResult,
+            completedAttempts,
+            correctAttempts,
+            totalScore
+         ] = await Promise.all([
+            db.QuizAttempt.findAndCountAll({
+               where: userWhere,
+               include: [
+                  {
+                     model: db.QuizVignette,
+                     as: 'vignette',
+                     include: [
+                        {
+                           model: db.Disease,
+                           as: 'disease',
+                           attributes: ['name', 'icd_code']
+                        }
+                     ]
+                  }
+               ],
+               order: [['created_at', 'DESC']],
+               limit,
+               offset
+            }),
+            db.QuizAttempt.count({
+               where: {
+                  ...userWhere,
+                  is_correct: {
+                     [Op.ne]: null
+                  }
                }
-            ],
-            order: [['created_at', 'DESC']],
-            limit,
-            offset
-         })
+            }),
+            db.QuizAttempt.count({
+               where: {
+                  ...userWhere,
+                  is_correct: true
+               }
+            }),
+            db.QuizAttempt.sum('score', {
+               where: userWhere
+            })
+         ])
+
+         const { count, rows } = attemptsResult
 
          res.status(HttpStatusCode.Ok).json({
             success: true,
@@ -482,7 +509,10 @@ class Controller {
                per_page: limit,
                current_page: page,
                total_row: count,
-               total_page: Math.ceil(count / limit)
+               total_page: Math.ceil(count / limit),
+               completed_attempts: completedAttempts,
+               correct_attempts: correctAttempts,
+               total_score: Number(totalScore) || 0
             },
             data: rows.map((attempt) => ({
                id: attempt.id,

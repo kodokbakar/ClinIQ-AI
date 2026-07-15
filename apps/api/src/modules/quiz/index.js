@@ -220,7 +220,7 @@ router.post('/submit-diagnosis', authentication, Controller.submitDiagnosis)
  *   get:
  *     tags: [Quiz]
  *     summary: Get my quiz attempts
- *     description: Returns paginated quiz attempt history for the authenticated user.
+ *     description: Returns paginated quiz attempt history plus all-history aggregate statistics for the authenticated user.
  *     security:
  *       - bearerAuth: []
  *     parameters:
