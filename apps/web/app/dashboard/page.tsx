@@ -2,17 +2,28 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentUser, type AuthUser } from "../_lib/auth-api";
-import { getMyAttempts, type QuizAttemptHistory } from "../_lib/quiz-api";
+import {
+  getMyAttempts,
+  type PaginationMetadata,
+  type QuizAttemptHistory,
+} from "../_lib/quiz-api";
 import "./dashboard-home.css";
 
 const scoreFormatter = new Intl.NumberFormat("id-ID");
 
+type DashboardStats = {
+  total: number;
+  correct: number;
+  score: number;
+  winrate: number;
+};
+
 type DashboardState = {
   user: AuthUser;
   attempts: QuizAttemptHistory[];
-  totalAttempts: number;
+  stats: DashboardStats;
 };
 
 const quizActions = [
@@ -48,8 +59,29 @@ function getRoleName(user: AuthUser): string {
   return user.role?.name ?? (user.is_superadmin ? "Superadmin" : "User");
 }
 
-function completedAttempts(attempts: QuizAttemptHistory[]) {
-  return attempts.filter((attempt) => attempt.is_correct !== null);
+function buildDashboardStats(
+  attempts: QuizAttemptHistory[],
+  metadata?: PaginationMetadata,
+): DashboardStats {
+  const recentCompleted = attempts.filter(
+    (attempt) => attempt.is_correct !== null,
+  );
+
+  const total = metadata?.total_row ?? attempts.length;
+  const completed = metadata?.completed_attempts ?? recentCompleted.length;
+  const correct =
+    metadata?.correct_attempts ??
+    recentCompleted.filter((attempt) => attempt.is_correct).length;
+  const score =
+    metadata?.total_score ??
+    attempts.reduce((sum, attempt) => sum + (attempt.score ?? 0), 0);
+
+  return {
+    total,
+    correct,
+    score,
+    winrate: completed > 0 ? Math.round((correct / completed) * 100) : 0,
+  };
 }
 
 function latestAttemptLabel(attempts: QuizAttemptHistory[]): string {
@@ -83,8 +115,10 @@ export default function DashboardPage() {
         setState({
           user,
           attempts: attemptsResult.data,
-          totalAttempts:
-            attemptsResult.metadata?.total_row ?? attemptsResult.data.length,
+          stats: buildDashboardStats(
+            attemptsResult.data,
+            attemptsResult.metadata,
+          ),
         });
       } catch {
         router.replace("/login");
@@ -99,24 +133,6 @@ export default function DashboardPage() {
       isMounted = false;
     };
   }, [router]);
-
-  const stats = useMemo(() => {
-    const attempts = state?.attempts ?? [];
-    const completed = completedAttempts(attempts);
-    const correct = completed.filter((attempt) => attempt.is_correct).length;
-    const total = state?.totalAttempts ?? 0;
-    const score = attempts.reduce(
-      (sum, attempt) => sum + (attempt.score ?? 0),
-      0,
-    );
-
-    return {
-      total,
-      correct,
-      score,
-      winrate: total > 0 ? Math.round((correct / total) * 100) : 0,
-    };
-  }, [state]);
 
   if (isLoading) {
     return (
@@ -135,7 +151,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { user, attempts } = state;
+  const { user, attempts, stats } = state;
   const roleName = getRoleName(user);
 
   return (

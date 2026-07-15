@@ -73,6 +73,9 @@ export type PaginationMetadata = {
   current_page: number;
   total_row: number;
   total_page: number;
+  completed_attempts?: number;
+  correct_attempts?: number;
+  total_score?: number;
 };
 
 export type PaginatedResult<T> = {
