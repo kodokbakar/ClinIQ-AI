@@ -2,17 +2,33 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentUser, type AuthUser } from "../_lib/auth-api";
-import { getMyAttempts, type QuizAttemptHistory } from "../_lib/quiz-api";
+import {
+  getMyAttempts,
+  type PaginationMetadata,
+  type QuizAttemptHistory,
+} from "../_lib/quiz-api";
 import "./dashboard-home.css";
 
+import { DashboardHistory } from "../_components/dashboard/dashboard-history";
+
 const scoreFormatter = new Intl.NumberFormat("id-ID");
+const HISTORY_PAGE_SIZE = 3;
+
+type DashboardStats = {
+  total: number;
+  correct: number;
+  score: number;
+  winrate: number;
+};
 
 type DashboardState = {
   user: AuthUser;
   attempts: QuizAttemptHistory[];
-  totalAttempts: number;
+  stats: DashboardStats;
+  currentPage: number;
+  totalPages: number;
 };
 
 const quizActions = [
@@ -36,20 +52,33 @@ const quizActions = [
   },
 ];
 
-function formatDate(value?: string | null): string {
-  if (!value) return "Belum ada aktivitas";
-
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-  }).format(new Date(value));
-}
-
 function getRoleName(user: AuthUser): string {
   return user.role?.name ?? (user.is_superadmin ? "Superadmin" : "User");
 }
 
-function completedAttempts(attempts: QuizAttemptHistory[]) {
-  return attempts.filter((attempt) => attempt.is_correct !== null);
+function buildDashboardStats(
+  attempts: QuizAttemptHistory[],
+  metadata?: PaginationMetadata,
+): DashboardStats {
+  const recentCompleted = attempts.filter(
+    (attempt) => attempt.is_correct !== null,
+  );
+
+  const total = metadata?.total_row ?? attempts.length;
+  const completed = metadata?.completed_attempts ?? recentCompleted.length;
+  const correct =
+    metadata?.correct_attempts ??
+    recentCompleted.filter((attempt) => attempt.is_correct).length;
+  const score =
+    metadata?.total_score ??
+    attempts.reduce((sum, attempt) => sum + (attempt.score ?? 0), 0);
+
+  return {
+    total,
+    correct,
+    score,
+    winrate: completed > 0 ? Math.round((correct / completed) * 100) : 0,
+  };
 }
 
 function latestAttemptLabel(attempts: QuizAttemptHistory[]): string {
@@ -63,9 +92,11 @@ function latestAttemptLabel(attempts: QuizAttemptHistory[]): string {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const { replace } = useRouter();
   const [state, setState] = useState<DashboardState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [historyError, setHistoryError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -73,21 +104,27 @@ export default function DashboardPage() {
     async function loadDashboard() {
       try {
         const user = await getCurrentUser();
-        const attemptsResult = await getMyAttempts(5).catch(() => ({
-          data: [],
-          metadata: undefined,
-        }));
+        const attemptsResult = await getMyAttempts(HISTORY_PAGE_SIZE, 1).catch(
+          () => ({
+            data: [],
+            metadata: undefined,
+          }),
+        );
 
         if (!isMounted) return;
 
         setState({
           user,
           attempts: attemptsResult.data,
-          totalAttempts:
-            attemptsResult.metadata?.total_row ?? attemptsResult.data.length,
+          stats: buildDashboardStats(
+            attemptsResult.data,
+            attemptsResult.metadata,
+          ),
+          currentPage: attemptsResult.metadata?.current_page ?? 1,
+          totalPages: attemptsResult.metadata?.total_page ?? 1,
         });
       } catch {
-        router.replace("/login");
+        replace("/login");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -98,25 +135,49 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [router]);
+  }, [replace]);
 
-  const stats = useMemo(() => {
-    const attempts = state?.attempts ?? [];
-    const completed = completedAttempts(attempts);
-    const correct = completed.filter((attempt) => attempt.is_correct).length;
-    const total = state?.totalAttempts ?? 0;
-    const score = attempts.reduce(
-      (sum, attempt) => sum + (attempt.score ?? 0),
-      0,
-    );
+  async function handleLoadMore() {
+    if (!state || isLoadingMore || state.currentPage >= state.totalPages) {
+      return;
+    }
 
-    return {
-      total,
-      correct,
-      score,
-      winrate: total > 0 ? Math.round((correct / total) * 100) : 0,
-    };
-  }, [state]);
+    const nextPage = state.currentPage + 1;
+
+    try {
+      setHistoryError("");
+      setIsLoadingMore(true);
+
+      const result = await getMyAttempts(HISTORY_PAGE_SIZE, nextPage);
+
+      setState((current) => {
+        if (!current) return current;
+
+        const existingIds = new Set(
+          current.attempts.map((attempt) => attempt.id),
+        );
+
+        const newAttempts = result.data.filter(
+          (attempt) => !existingIds.has(attempt.id),
+        );
+
+        return {
+          ...current,
+          attempts: [...current.attempts, ...newAttempts],
+          currentPage: result.metadata?.current_page ?? nextPage,
+          totalPages: result.metadata?.total_page ?? current.totalPages,
+        };
+      });
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error
+          ? error.message
+          : "Riwayat tambahan gagal dimuat.",
+      );
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -135,7 +196,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { user, attempts } = state;
+  const { user, attempts, stats, currentPage, totalPages } = state;
   const roleName = getRoleName(user);
 
   return (
@@ -215,51 +276,14 @@ export default function DashboardPage() {
         </aside>
       </div>
 
-      <section className="diagnostic-panel">
-        <div className="diagnostic-section-head">
-          <div>
-            <p className="diagnostic-eyebrow">recent attempts</p>
-            <h2>Riwayat latihan terakhir.</h2>
-          </div>
-        </div>
-
-        {attempts.length > 0 ? (
-          <div className="attempt-table">
-            {attempts.map((attempt) => (
-              <article className="attempt-row" key={attempt.id}>
-                <div>
-                  <strong>
-                    {attempt.disease_name ?? "Kasus belum selesai"}
-                  </strong>
-                  <span>
-                    {attempt.disease_icd ?? "ICD pending"} ·{" "}
-                    {formatDate(attempt.attempt_date)}
-                  </span>
-                </div>
-                <div>
-                  <span>
-                    {attempt.is_correct === null
-                      ? "Pending"
-                      : attempt.is_correct
-                        ? "Correct"
-                        : "Incorrect"}
-                  </span>
-                  <strong>
-                    {scoreFormatter.format(attempt.score ?? 0)} pts
-                  </strong>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="diagnostic-empty">
-            <strong>Belum ada attempt.</strong>
-            <p>
-              Mulai dari daily quiz atau random quiz untuk membangun riwayat.
-            </p>
-          </div>
-        )}
-      </section>
+      <DashboardHistory
+        attempts={attempts}
+        totalAttempts={stats.total}
+        hasMore={currentPage < totalPages}
+        isLoadingMore={isLoadingMore}
+        error={historyError}
+        onLoadMore={handleLoadMore}
+      />
     </section>
   );
 }

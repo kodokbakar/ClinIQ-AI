@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardPage from "./page";
 
@@ -44,6 +44,20 @@ const attempts = [
   },
 ];
 
+const moreAttempts = [
+  {
+    id: "attempt-2",
+    vignette_id: "vignette-2",
+    disease_name: "Malaria",
+    disease_icd: "1F40",
+    clues_revealed: 1,
+    is_correct: true,
+    score: 500,
+    attempt_date: "2026-07-09",
+    submitted_diagnosis: "Malaria",
+  },
+];
+
 describe("Dashboard page", () => {
   beforeEach(() => {
     replaceMock.mockReset();
@@ -61,17 +75,22 @@ describe("Dashboard page", () => {
         }
 
         if (url.includes("/api/v1/quiz/attempts/me")) {
+          const isSecondPage = url.includes("page=2");
+
           return Promise.resolve(
             mockApiResponse({
               success: true,
               message: "success",
               metadata: {
-                per_page: 5,
-                current_page: 1,
-                total_row: 1,
-                total_page: 1,
+                per_page: 3,
+                current_page: isSecondPage ? 2 : 1,
+                total_row: 10,
+                total_page: 2,
+                completed_attempts: 8,
+                correct_attempts: 6,
+                total_score: 900,
               },
-              data: attempts,
+              data: isSecondPage ? moreAttempts : attempts,
             }),
           );
         }
@@ -90,7 +109,22 @@ describe("Dashboard page", () => {
 
     expect(screen.queryByText("diagnostic study desk")).toBeTruthy();
     expect(screen.queryByText("Dengue Fever")).toBeTruthy();
-    expect(screen.queryByText("400")).toBeTruthy();
+    expect(screen.queryByText("400 pts")).toBeTruthy();
+    expect(
+      screen.getByText("Total Attempts").closest("article"),
+    ).toHaveTextContent("10");
+
+    expect(
+      screen.getByText("Correct Cases").closest("article"),
+    ).toHaveTextContent("6");
+
+    expect(screen.getByText("Win Rate").closest("article")).toHaveTextContent(
+      "75%",
+    );
+
+    expect(screen.getByText("Score").closest("article")).toHaveTextContent(
+      "900",
+    );
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
@@ -141,5 +175,39 @@ describe("Dashboard page", () => {
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalledWith("/login");
     });
+  });
+
+  it("loads and appends more attempt history", async () => {
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Dengue Fever")).toBeTruthy();
+    });
+
+    expect(screen.queryByText("Malaria")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /tampilkan lainnya/i,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("Malaria")).toBeTruthy();
+    });
+
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) =>
+          String(url).includes("/api/v1/quiz/attempts/me?page=2&limit=3"),
+        ),
+    ).toBe(true);
+
+    expect(
+      screen.queryByRole("button", {
+        name: /tampilkan lainnya/i,
+      }),
+    ).toBeNull();
   });
 });
