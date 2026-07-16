@@ -189,11 +189,29 @@ describe("Dashboard page", () => {
 
     expect(within(memberList).getByText("dok@email.com")).toBeTruthy();
 
+    const groupPanel = screen.getByRole("region", {
+      name: "Status grup belajar",
+    });
+
     expect(
-      screen.getByRole("button", {
+      within(groupPanel).getByRole("button", {
         name: /leave group/i,
       }),
     ).toBeTruthy();
+
+    const actionSection = screen
+      .getByRole("heading", {
+        name: "Lanjutkan latihan klinis.",
+      })
+      .closest("section");
+
+    expect(actionSection).not.toBeNull();
+
+    expect(
+      within(actionSection as HTMLElement).queryByRole("button", {
+        name: /leave group/i,
+      }),
+    ).toBeNull();
 
     expect(
       screen.getByText("Total Attempts").closest("article"),
@@ -232,8 +250,14 @@ describe("Dashboard page", () => {
     );
 
     expect(
-      screen.getByRole("button", {
-        name: /leave group/i,
+      screen.queryByRole("button", {
+        name: /join group/i,
+      }),
+    ).toBeNull();
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Lanjutkan latihan klinis.",
       }),
     ).toBeTruthy();
   });
@@ -354,5 +378,17 @@ describe("Dashboard page", () => {
     });
 
     expect(screen.queryByText("Kelompok Belajar A")).toBeNull();
+
+    const joinGroupButton = screen.getByRole("button", {
+      name: /join group/i,
+    });
+
+    fireEvent.click(joinGroupButton);
+
+    expect(
+      screen.getByRole("dialog", {
+        name: "Masukkan kode grup.",
+      }),
+    ).toBeTruthy();
   });
 });
