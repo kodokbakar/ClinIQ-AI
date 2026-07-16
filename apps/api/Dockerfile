@@ -1,18 +1,28 @@
-# Use the official Bun image
-FROM oven/bun:1.3.14 as builder
+FROM oven/bun:1.3.14-alpine
 
-WORKDIR /app
-COPY . .
+WORKDIR /repo
 
-RUN bun install
+COPY package.json bun.lock ./
 
-RUN bun run build --filter=api
+COPY apps/api/package.json ./apps/api/package.json
+COPY apps/docs/package.json ./apps/docs/package.json
+COPY apps/web/package.json ./apps/web/package.json
 
-FROM oven/bun:1.3.14 as runner
-WORKDIR /app
+COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY packages/typescript-config/package.json ./packages/typescript-config/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
 
-COPY --from=builder /app .
+RUN bun ci --production
+
+COPY apps/api ./apps/api
+
+ENV NODE_ENV=production
+ENV PORT=8080
+
+WORKDIR /repo/apps/api
 
 EXPOSE 8080
 
-CMD ["bun", "run", "start", "--filter=api"]
+USER bun
+
+CMD ["bun", "index.js"]

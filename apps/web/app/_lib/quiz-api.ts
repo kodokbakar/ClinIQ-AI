@@ -73,6 +73,9 @@ export type PaginationMetadata = {
   current_page: number;
   total_row: number;
   total_page: number;
+  completed_attempts?: number;
+  correct_attempts?: number;
+  total_score?: number;
 };
 
 export type PaginatedResult<T> = {
@@ -205,9 +208,10 @@ export async function getAIExplanation(
 
 export async function getMyAttempts(
   limit = 5,
+  page = 1,
 ): Promise<PaginatedResult<QuizAttemptHistory>> {
   const result = await requestApi<QuizAttemptHistory[]>(
-    `/api/v1/quiz/attempts/me?page=1&limit=${limit}`,
+    `/api/v1/quiz/attempts/me?page=${page}&limit=${limit}`,
   );
 
   return {

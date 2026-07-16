@@ -608,9 +608,19 @@ describe('quiz API', () => {
       expect(attemptIds).not.toContain(otherAttempt.id)
    })
 
-   it('my attempts returns pagination metadata', async () => {
-      await createAttempt(users.primary, quizData.first.vignette)
-      await createAttempt(users.primary, quizData.second.vignette)
+   it('my attempts returns pagination and all-history aggregate metadata', async () => {
+      await createAttempt(users.primary, quizData.first.vignette, {
+         is_correct: true,
+         score: 500
+      })
+      await createAttempt(users.primary, quizData.second.vignette, {
+         is_correct: false,
+         score: 0
+      })
+      await createAttempt(users.other, quizData.first.vignette, {
+         is_correct: true,
+         score: 500
+      })
 
       const response = await authGet('/api/v1/quiz/attempts/me?page=1&limit=1')
 
@@ -621,7 +631,10 @@ describe('quiz API', () => {
          per_page: 1,
          current_page: 1,
          total_row: 2,
-         total_page: 2
+         total_page: 2,
+         completed_attempts: 2,
+         correct_attempts: 1,
+         total_score: 500
       })
    })
 })

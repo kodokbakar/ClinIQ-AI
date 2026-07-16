@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: 1.3.14
+  TURBO_TELEMETRY_DISABLED: 1
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Lint frontend workspaces
+        run: >
+          bunx turbo run lint
+          --filter=web
+          --filter=docs
+          --filter=@repo/ui
+
+      - name: Check frontend types
+        run: >
+          bunx turbo run check-types
+          --filter=web
+          --filter=docs
+          --filter=@repo/ui
+
+      - name: Test web application
+        run: bunx turbo run test --filter=web
+
+      - name: Build frontend applications
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: >
+          bunx turbo run build
+          --filter=web
+          --filter=docs
+
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      NODE_ENV: local
+
+      DB_USER: cliniq
+      DB_PASS: cliniq-ci-password
+      DB_NAME: cliniq_test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_CONNECTION: postgres
+
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+
+      JWT_KEY: ci-jwt-key-not-for-production
+      ALLOWED_ORIGINS: "*"
+      SKIP_AI_EXPLANATIONS: "true"
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: cliniq
+          POSTGRES_PASSWORD: cliniq-ci-password
+          POSTGRES_DB: cliniq_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cliniq -d cliniq_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Lint API
+        run: bun --cwd apps/api run lint
+
+      - name: Run database migrations
+        run: bun --cwd apps/api run migrate
+
+      - name: Test API
+        run: bun --cwd apps/api run test
+
+  publish-api-image:
+    name: Publish API Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - frontend
+      - api
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve image name
+        id: image
+        shell: bash
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/cliniq-ai-api" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: metadata
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=long,prefix=sha-
+
+      - name: Build and publish API image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
