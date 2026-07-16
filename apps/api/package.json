@@ -6,7 +6,8 @@
   "scripts": {
     "start": "bun index.js",
     "dev": "bun --watch index.js",
-    "lint": "eslint . --ext .js --fix",
+    "lint": "eslint . --ext .js --max-warnings 0",
+    "lint:fix": "eslint . --ext .js --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
