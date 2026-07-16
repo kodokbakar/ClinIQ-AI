@@ -85,16 +85,6 @@ function buildDashboardStats(
   };
 }
 
-function latestAttemptLabel(attempts: QuizAttemptHistory[]): string {
-  const latest = attempts[0];
-
-  if (!latest) return "Belum ada percobaan";
-  if (latest.is_correct === null) return "Kasus belum selesai";
-  if (latest.is_correct) return "Jawaban benar";
-
-  return "Butuh review ulang";
-}
-
 export default function DashboardPage() {
   const { replace } = useRouter();
   const [state, setState] = useState<DashboardState | null>(null);
@@ -337,24 +327,6 @@ export default function DashboardPage() {
             ) : null}
           </div>
         </section>
-
-        <aside className="diagnostic-panel">
-          <p className="diagnostic-eyebrow">learning pulse</p>
-          <h2 className="diagnostic-side-title">
-            {latestAttemptLabel(attempts)}
-          </h2>
-
-          <div className="learning-flow" aria-label="Alur belajar">
-            {[
-              "Read clue",
-              "Form hypothesis",
-              "Submit diagnosis",
-              "Study AI note",
-            ].map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-        </aside>
       </div>
 
       <DashboardHistory
