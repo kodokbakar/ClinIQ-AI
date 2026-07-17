@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 import {
+  disbandGroup,
   getGroupById,
   joinGroupByCode,
   leaveGroup,
@@ -29,7 +30,7 @@ export function GroupMembershipModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const isOwner = group?.my_role === "admin";
+  const isLeader = group?.my_role === "admin";
 
   useEffect(() => {
     if (!isOpen) {
@@ -85,14 +86,18 @@ export function GroupMembershipModal({
     }
   }
 
-  async function handleLeave() {
-    if (!group || isOwner) return;
+  async function handleRemoveGroup() {
+    if (!group) return;
 
     try {
       setError("");
       setIsSubmitting(true);
 
-      await leaveGroup(group.id);
+      if (isLeader) {
+        await disbandGroup(group.id);
+      } else {
+        await leaveGroup(group.id);
+      }
 
       onLeft();
       onClose();
@@ -100,7 +105,9 @@ export function GroupMembershipModal({
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Gagal keluar dari grup.",
+          : isLeader
+            ? "Gagal membubarkan grup."
+            : "Gagal keluar dari grup.",
       );
     } finally {
       setIsSubmitting(false);
@@ -108,6 +115,18 @@ export function GroupMembershipModal({
   }
 
   if (!isOpen) return null;
+
+  const modalEyebrow = group
+    ? isLeader
+      ? "disband study circle"
+      : "leave study circle"
+    : "join study circle";
+
+  const modalTitle = group
+    ? isLeader
+      ? "Bubarkan grup?"
+      : "Keluar dari grup?"
+    : "Masukkan kode grup.";
 
   return (
     <div
@@ -126,13 +145,8 @@ export function GroupMembershipModal({
       >
         <div className="group-modal__header flex items-start justify-between gap-4">
           <div>
-            <p className="diagnostic-eyebrow">
-              {group ? "leave study circle" : "join study circle"}
-            </p>
-
-            <h2 id="group-modal-title">
-              {group ? "Keluar dari grup?" : "Masukkan kode grup."}
-            </h2>
+            <p className="diagnostic-eyebrow">{modalEyebrow}</p>
+            <h2 id="group-modal-title">{modalTitle}</h2>
           </div>
 
           <button
@@ -154,10 +168,10 @@ export function GroupMembershipModal({
               <small>{group.member_count} anggota</small>
             </div>
 
-            {isOwner ? (
+            {isLeader ? (
               <p className="group-modal__notice">
-                Kamu adalah pemilik grup. Pemilik tidak dapat keluar sebelum
-                kepemilikan dipindahkan atau grup dihapus.
+                Grup beserta seluruh keanggotaannya akan dihapus. Tindakan ini
+                tidak dapat dibatalkan.
               </p>
             ) : (
               <p className="group-modal__copy">
@@ -185,13 +199,15 @@ export function GroupMembershipModal({
               <button
                 type="button"
                 className="group-modal__danger"
-                disabled={isSubmitting || isOwner}
-                onClick={handleLeave}
+                disabled={isSubmitting}
+                onClick={handleRemoveGroup}
               >
                 {isSubmitting
-                  ? "Keluar..."
-                  : isOwner
-                    ? "Owner tidak bisa keluar"
+                  ? isLeader
+                    ? "Membubarkan..."
+                    : "Keluar..."
+                  : isLeader
+                    ? "Bubarkan grup"
                     : "Keluar dari grup"}
               </button>
             </div>

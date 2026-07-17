@@ -38,7 +38,7 @@ type JoinGroupResponse = {
   group: GroupSummary;
 };
 
-type LeaveGroupResponse = {
+type GroupActionResponse = {
   message: string;
 };
 
@@ -113,11 +113,20 @@ export async function joinGroupByCode(
 }
 
 export async function leaveGroup(groupId: string): Promise<void> {
-  await requestGroupsApi<LeaveGroupResponse>(
+  await requestGroupsApi<GroupActionResponse>(
     `/api/v1/groups/${encodeURIComponent(groupId)}/leave`,
     {
       method: "POST",
       body: JSON.stringify({}),
+    },
+  );
+}
+
+export async function disbandGroup(groupId: string): Promise<void> {
+  await requestGroupsApi<GroupActionResponse>(
+    `/api/v1/groups/${encodeURIComponent(groupId)}`,
+    {
+      method: "DELETE",
     },
   );
 }

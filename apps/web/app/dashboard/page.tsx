@@ -17,6 +17,7 @@ import {
 } from "../_lib/groups-api";
 
 import "./dashboard-home.css";
+import { GroupMembersModal } from "../_components/groups/group-members-modal";
 import { DashboardHistory } from "../_components/dashboard/dashboard-history";
 import { DashboardGroupPanel } from "../_components/groups/dashboard-group-panel";
 import { GroupMembershipModal } from "../_components/groups/group-membership-modal";
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -198,6 +200,8 @@ export default function DashboardPage() {
   }
 
   function handleGroupLeft() {
+    setIsMembersModalOpen(false);
+
     setState((current) => {
       if (!current) return current;
 
@@ -262,8 +266,8 @@ export default function DashboardPage() {
 
           <DashboardGroupPanel
             group={group}
-            details={groupDetails}
-            onLeaveGroup={() => setIsGroupModalOpen(true)}
+            onMembershipAction={() => setIsGroupModalOpen(true)}
+            onViewMembers={() => setIsMembersModalOpen(true)}
           />
         </div>
       </div>
@@ -336,6 +340,12 @@ export default function DashboardPage() {
         isLoadingMore={isLoadingMore}
         error={historyError}
         onLoadMore={handleLoadMore}
+      />
+      <GroupMembersModal
+        isOpen={isMembersModalOpen}
+        group={group}
+        details={groupDetails}
+        onClose={() => setIsMembersModalOpen(false)}
       />
       <GroupMembershipModal
         isOpen={isGroupModalOpen}

@@ -1,18 +1,18 @@
-import type { GroupDetails, GroupSummary } from "../../_lib/groups-api";
+import type { GroupSummary } from "../../_lib/groups-api";
 import "./dashboard-group-panel.css";
 
 type DashboardGroupPanelProps = {
   group: GroupSummary | null;
-  details: GroupDetails | null;
-  onLeaveGroup: () => void;
+  onMembershipAction: () => void;
+  onViewMembers: () => void;
 };
 
 export function DashboardGroupPanel({
   group,
-  details,
-  onLeaveGroup,
+  onMembershipAction,
+  onViewMembers,
 }: DashboardGroupPanelProps) {
-  const members = details?.members ?? [];
+  const isLeader = group?.my_role === "admin";
 
   return (
     <section
@@ -30,53 +30,29 @@ export function DashboardGroupPanel({
       </div>
 
       {group ? (
-        <div className="dashboard-group-members">
-          <div className="dashboard-group-members__header flex items-center justify-between gap-3">
+        <div className="dashboard-group-actions">
+          <div className="dashboard-group-actions__header flex items-center justify-between gap-3">
             <span>members</span>
             <strong>{group.member_count}</strong>
           </div>
 
-          {members.length > 0 ? (
-            <ul
-              className="dashboard-group-members__list grid gap-2"
-              aria-label={`Anggota ${group.name}`}
+          <div className="dashboard-group-actions__buttons grid gap-2">
+            <button
+              type="button"
+              className="dashboard-group-action dashboard-group-action--danger"
+              onClick={onMembershipAction}
             >
-              {members.map((member) => (
-                <li
-                  key={member.id}
-                  className="dashboard-group-member flex items-center gap-3"
-                >
-                  <span
-                    className="dashboard-group-member__avatar"
-                    aria-hidden="true"
-                  >
-                    {member.user.name.slice(0, 1).toUpperCase()}
-                  </span>
+              {isLeader ? "Disband Group" : "Leave Group"}
+            </button>
 
-                  <span className="dashboard-group-member__identity">
-                    <strong>{member.user.name}</strong>
-                    <small>{member.user.email}</small>
-                  </span>
-
-                  <span className="dashboard-group-member__role">
-                    {member.is_admin ? "Admin" : "Member"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="dashboard-group-members__empty">
-              Daftar anggota belum tersedia.
-            </p>
-          )}
-
-          <button
-            type="button"
-            className="dashboard-group-members__leave"
-            onClick={onLeaveGroup}
-          >
-            Leave Group
-          </button>
+            <button
+              type="button"
+              className="dashboard-group-action dashboard-group-action--secondary"
+              onClick={onViewMembers}
+            >
+              Member List
+            </button>
+          </div>
         </div>
       ) : null}
     </section>
