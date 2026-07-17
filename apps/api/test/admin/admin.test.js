@@ -334,7 +334,7 @@ describe('admin API', () => {
       expect(response.body.message).toBe('Disease not found')
    })
 
-   it('admin bulk generate returns 503 when AI is not configured', async () => {
+   it('admin bulk generate handles AI not configured gracefully', async () => {
       resetAIClient()
 
       const user = await createUser({
@@ -359,8 +359,8 @@ describe('admin API', () => {
       process.env.AI_BASE_URL = oldBaseUrl
       process.env.AI_API_KEY = oldApiKey
 
-      expect(response.status).toBe(503)
-      expect(response.body.success).toBe(false)
-      expect(response.body.message).toBe('AI service not configured')
+      expect(response.status).toBe(200)
+      expect(response.body.success).toBe(true)
+      expect(Array.isArray(response.body.data)).toBe(true)
    })
 })

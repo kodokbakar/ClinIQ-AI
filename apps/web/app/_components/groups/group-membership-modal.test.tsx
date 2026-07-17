@@ -44,7 +44,7 @@ const groupDetails = {
 
 describe("Group membership modal", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(global, "fetch").mockImplementation(vi.fn());
   });
 
   it("joins group from the modal", async () => {

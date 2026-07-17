@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 import {
+  createGroup,
   disbandGroup,
   getGroupById,
   joinGroupByCode,
@@ -26,7 +27,10 @@ export function GroupMembershipModal({
   onJoined,
   onLeft,
 }: GroupMembershipModalProps) {
+  const [mode, setMode] = useState<"join" | "create">("join");
   const [inviteCode, setInviteCode] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [groupDescription, setGroupDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,7 +38,10 @@ export function GroupMembershipModal({
 
   useEffect(() => {
     if (!isOpen) {
+      setMode("join");
       setInviteCode("");
+      setGroupName("");
+      setGroupDescription("");
       setError("");
       return;
     }
@@ -80,6 +87,38 @@ export function GroupMembershipModal({
         requestError instanceof Error
           ? requestError.message
           : "Grup gagal dimasuki.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const name = groupName.trim();
+    if (!name) {
+      setError("Nama grup tidak boleh kosong.");
+      return;
+    }
+
+    try {
+      setError("");
+      setIsSubmitting(true);
+
+      const createdGroup = await createGroup({
+        name,
+        description: groupDescription.trim() || undefined,
+      });
+      const details = await getGroupById(createdGroup.id).catch(() => null);
+
+      onJoined(createdGroup, details);
+      onClose();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Grup gagal dibuat.",
       );
     } finally {
       setIsSubmitting(false);
@@ -213,67 +252,188 @@ export function GroupMembershipModal({
             </div>
           </div>
         ) : (
-          <form
-            className="group-modal__form grid gap-4"
-            data-testid="group-modal-form"
-            onSubmit={handleJoin}
-            noValidate
-          >
-            <p className="group-modal__copy">
-              Masukkan kode undangan dari pemilik grup. Huruf besar dan kecil
-              dianggap sama.
-            </p>
-
-            <div className="grid gap-2">
-              <label htmlFor="group-modal-invite-code">Kode undangan</label>
-
-              <input
-                id="group-modal-invite-code"
-                name="invite_code"
-                type="text"
-                value={inviteCode}
-                maxLength={20}
-                autoComplete="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                placeholder="Contoh: INVITEA1234"
-                onChange={(event) =>
-                  setInviteCode(event.target.value.toUpperCase())
-                }
-                aria-invalid={Boolean(error)}
-                aria-describedby={error ? "group-modal-error" : undefined}
-              />
-            </div>
-
-            {error ? (
-              <p
-                id="group-modal-error"
-                role="alert"
-                className="group-modal__error"
-              >
-                {error}
-              </p>
-            ) : null}
-
-            <div className="group-modal__actions flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="grid gap-4">
+            <div
+              className="group-modal__tabs flex gap-1 rounded-xl bg-[var(--auth-line)] p-1"
+              role="tablist"
+              aria-label="Pilih tindakan grup"
+            >
               <button
                 type="button"
-                className="group-modal__secondary"
-                disabled={isSubmitting}
-                onClick={onClose}
+                role="tab"
+                aria-selected={mode === "join"}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${
+                  mode === "join"
+                    ? "bg-[var(--auth-cream)] text-[var(--auth-ink)] shadow-sm"
+                    : "text-[var(--auth-muted)] hover:text-[var(--auth-ink)]"
+                }`}
+                onClick={() => {
+                  setMode("join");
+                  setError("");
+                }}
               >
-                Batal
+                Gabung
               </button>
-
               <button
-                type="submit"
-                className="group-modal__primary"
-                disabled={isSubmitting}
+                type="button"
+                role="tab"
+                aria-selected={mode === "create"}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${
+                  mode === "create"
+                    ? "bg-[var(--auth-cream)] text-[var(--auth-ink)] shadow-sm"
+                    : "text-[var(--auth-muted)] hover:text-[var(--auth-ink)]"
+                }`}
+                onClick={() => {
+                  setMode("create");
+                  setError("");
+                }}
               >
-                {isSubmitting ? "Menghubungkan..." : "Gabung ke grup"}
+                Buat Baru
               </button>
             </div>
-          </form>
+
+            {mode === "join" ? (
+              <form
+                className="group-modal__form grid gap-4"
+                data-testid="group-modal-form"
+                onSubmit={handleJoin}
+                noValidate
+              >
+                <p className="group-modal__copy">
+                  Masukkan kode undangan dari pemilik grup. Huruf besar dan
+                  kecil dianggap sama.
+                </p>
+
+                <div className="grid gap-2">
+                  <label htmlFor="group-modal-invite-code">
+                    Kode undangan
+                  </label>
+                  <input
+                    id="group-modal-invite-code"
+                    name="invite_code"
+                    type="text"
+                    value={inviteCode}
+                    maxLength={20}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    placeholder="Contoh: INVITEA1234"
+                    onChange={(event) =>
+                      setInviteCode(event.target.value.toUpperCase())
+                    }
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={
+                      error ? "group-modal-error" : undefined
+                    }
+                  />
+                </div>
+
+                {error ? (
+                  <p
+                    id="group-modal-error"
+                    role="alert"
+                    className="group-modal__error"
+                  >
+                    {error}
+                  </p>
+                ) : null}
+
+                <div className="group-modal__actions flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    className="group-modal__secondary"
+                    disabled={isSubmitting}
+                    onClick={onClose}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="group-modal__primary"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Menghubungkan..." : "Gabung ke grup"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form
+                className="group-modal__form grid gap-4"
+                onSubmit={handleCreate}
+                noValidate
+              >
+                <p className="group-modal__copy">
+                  Buat grup belajar baru. Kamu akan otomatis menjadi admin grup.
+                </p>
+
+                <div className="grid gap-2">
+                  <label htmlFor="group-modal-name">Nama grup</label>
+                  <input
+                    id="group-modal-name"
+                    name="name"
+                    type="text"
+                    value={groupName}
+                    maxLength={100}
+                    autoComplete="off"
+                    placeholder="Contoh: Kelompok Belajar A"
+                    onChange={(event) => setGroupName(event.target.value)}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={
+                      error ? "group-modal-error" : undefined
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="group-modal-description">
+                    Deskripsi{" "}
+                    <span className="text-sm text-[var(--auth-muted)]">
+                      (opsional)
+                    </span>
+                  </label>
+                  <textarea
+                    id="group-modal-description"
+                    name="description"
+                    value={groupDescription}
+                    maxLength={500}
+                    rows={2}
+                    placeholder="Cerita sedikit tentang grup ini..."
+                    onChange={(event) =>
+                      setGroupDescription(event.target.value)
+                    }
+                  />
+                </div>
+
+                {error ? (
+                  <p
+                    id="group-modal-error"
+                    role="alert"
+                    className="group-modal__error"
+                  >
+                    {error}
+                  </p>
+                ) : null}
+
+                <div className="group-modal__actions flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    className="group-modal__secondary"
+                    disabled={isSubmitting}
+                    onClick={onClose}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="group-modal__primary"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Membuat..." : "Buat grup"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         )}
       </section>
     </div>

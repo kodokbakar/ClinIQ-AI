@@ -187,6 +187,18 @@
   padding: 1rem;
 }
 
+.quiz-diagnosis-header {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid rgba(15, 95, 92, 0.2);
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.4rem;
+  font-family: var(--font-display), serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--auth-ink);
+  letter-spacing: 0.01em;
+}
+
 .quiz-clue-card--locked {
   border-color: var(--auth-line);
   background: rgba(31, 36, 33, 0.04);

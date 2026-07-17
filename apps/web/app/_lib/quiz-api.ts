@@ -24,18 +24,16 @@ export type EmptyQuiz = {
   is_empty: true;
 };
 
-export type RevealClueResult = {
-  attempt_id: string;
-  clues_revealed: number;
-  clue: Omit<QuizClue, "is_revealed"> | null;
-};
-
 export type SubmitDiagnosisResult = {
-  attempt_id: string;
   is_correct: boolean;
-  correct_disease: string;
-  score: number;
-  clues_revealed: number;
+  score?: number;
+  correct_disease?: { name: string; icd_code: string };
+  clues_revealed?: number;
+  clue?: {
+    clue_number: number;
+    content: string;
+    type: string | null;
+  };
 };
 
 export type DiseaseSearchResult = {
@@ -83,10 +81,7 @@ export type PaginatedResult<T> = {
   metadata?: PaginationMetadata;
 };
 
-const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(
-  /\/$/,
-  "",
-);
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
 const API_BASE_URL =
   configuredApiBaseUrl ??
@@ -137,24 +132,6 @@ export function getQuizByMode(
   mode: QuizMode,
 ): Promise<QuizAttempt | EmptyQuiz> {
   return mode === "random" ? getRandomQuiz() : getDailyQuiz();
-}
-
-export async function revealNextClue(
-  attemptId: string,
-): Promise<RevealClueResult> {
-  const result = await requestApi<RevealClueResult>(
-    "/api/v1/quiz/reveal-clue",
-    {
-      method: "POST",
-      body: JSON.stringify({ attempt_id: attemptId }),
-    },
-  );
-
-  if (!result.data) {
-    throw new Error(result.message || "Clue gagal dibuka.");
-  }
-
-  return result.data;
 }
 
 export async function submitDiagnosis(payload: {

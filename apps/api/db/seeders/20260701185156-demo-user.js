@@ -33,7 +33,7 @@ module.exports = {
         },
         {
           id: uuidv4(),
-          name: 'admin',
+          name: 'Admin',
           email: 'admin@gmail.com',
           password: passwordHash,
           role_id: adminRole?.id,

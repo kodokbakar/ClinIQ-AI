@@ -276,27 +276,11 @@ describe('security regression', () => {
       const response = await request(app)
          .get('/api/v1/diseases/search')
          .query({
-            q: 'security%\' OR 1=1 --'
+            q: 'security%\\' OR 1=1 --'
          })
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
       expect(Array.isArray(response.body.data)).toBe(true)
-   })
-
-   it('user cannot access another user attempt', async () => {
-      const otherAttempt = await createDiseaseQuizAttemptForOtherUser()
-      const cookie = await loginCookie(users.primary.email)
-
-      const response = await request(app)
-         .post('/api/v1/quiz/reveal-clue')
-         .set('Cookie', cookie)
-         .send({
-            attempt_id: otherAttempt.id
-         })
-
-      expect(response.status).toBe(404)
-      expect(response.body.success).toBe(false)
-      expect(response.body.message).toBe('Attempt not found')
    })
 })

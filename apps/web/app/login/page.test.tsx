@@ -21,7 +21,7 @@ function mockApiResponse(body: unknown, ok = true): Response {
 describe("Login page", () => {
   beforeEach(() => {
     pushMock.mockReset();
-    vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(global, "fetch").mockImplementation(vi.fn());
   });
 
   it("renders login copy and form fields", () => {

@@ -10,6 +10,7 @@ const links = [
   { href: "/dashboard", label: "Study Desk", meta: "Overview" },
   { href: "/dashboard#daily-case", label: "Daily Case", meta: "Practice" },
   { href: "/dashboard/settings", label: "Account", meta: "Profile" },
+  { href: "/admin", label: "Admin", meta: "Data" },
 ];
 
 export function DashboardSidebar() {

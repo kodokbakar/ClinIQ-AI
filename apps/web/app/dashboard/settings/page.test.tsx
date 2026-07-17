@@ -21,7 +21,7 @@ function mockApiResponse(body: unknown, ok = true): Response {
 describe("Settings page", () => {
   beforeEach(() => {
     replaceMock.mockReset();
-    vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(global, "fetch").mockImplementation(vi.fn());
   });
 
   it("renders account settings from current user", async () => {

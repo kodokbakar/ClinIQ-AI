@@ -122,6 +122,22 @@ export async function leaveGroup(groupId: string): Promise<void> {
   );
 }
 
+export async function createGroup(payload: {
+  name: string;
+  description?: string;
+}): Promise<GroupSummary> {
+  const result = await requestGroupsApi<GroupSummary>("/api/v1/groups", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  if (!result.data) {
+    throw new Error(result.message || "Grup gagal dibuat.");
+  }
+
+  return result.data;
+}
+
 export async function disbandGroup(groupId: string): Promise<void> {
   await requestGroupsApi<GroupActionResponse>(
     `/api/v1/groups/${encodeURIComponent(groupId)}`,

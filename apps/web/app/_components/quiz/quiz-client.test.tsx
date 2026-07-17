@@ -47,38 +47,18 @@ const quizResponse = {
 describe("QuizClient", () => {
   beforeEach(() => {
     replaceMock.mockReset();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string, init?: RequestInit) => {
-        if (url.includes("/api/v1/quiz/daily")) {
+    vi.spyOn(global, "fetch").mockImplementation(
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes("/api/v1/quiz/daily")) {
           return Promise.resolve(mockApiResponse(quizResponse, true));
         }
 
-        if (url.includes("/api/v1/quiz/random")) {
+        if (String(input).includes("/api/v1/quiz/random")) {
           return Promise.resolve(mockApiResponse(quizResponse, true));
         }
 
-        if (url.includes("/api/v1/quiz/reveal-clue")) {
-          expect(init?.method).toBe("POST");
-          expect(init?.body).toBe(JSON.stringify({ attempt_id: "attempt-1" }));
 
-          return Promise.resolve(
-            mockApiResponse({
-              success: true,
-              data: {
-                attempt_id: "attempt-1",
-                clues_revealed: 2,
-                clue: {
-                  clue_number: 2,
-                  content: "Platelet count is low",
-                  type: "clinical",
-                },
-              },
-            }),
-          );
-        }
-
-        if (url.includes("/api/v1/diseases/search")) {
+if (String(input).includes("/api/v1/diseases/search")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -93,30 +73,46 @@ describe("QuizClient", () => {
           );
         }
 
-        if (url.includes("/api/v1/quiz/submit-diagnosis")) {
-          expect(init?.method).toBe("POST");
-          expect(init?.body).toBe(
-            JSON.stringify({
-              attempt_id: "attempt-1",
-              diagnosis: "Dengue Fever",
-            }),
-          );
 
-          return Promise.resolve(
-            mockApiResponse({
-              success: true,
-              data: {
-                attempt_id: "attempt-1",
-                is_correct: true,
-                correct_disease: "Dengue Fever",
-                score: 500,
-                clues_revealed: 1,
-              },
-            }),
-          );
+        if (String(input).includes("/api/v1/quiz/submit-diagnosis")) {
+          expect(init?.method).toBe("POST");
+          const body = JSON.parse(init?.body as string);
+          
+          if (body.diagnosis === "Dengue Fever") {
+            return Promise.resolve(
+              mockApiResponse({
+                success: true,
+                data: {
+                  attempt_id: "attempt-1",
+                  is_correct: true,
+                  correct_disease: {
+                    name: "Dengue Fever",
+                    icd_code: "1D2Z",
+                  },
+                  score: 500,
+                  clues_revealed: 1,
+                },
+              }),
+            );
+          } else {
+             return Promise.resolve(
+              mockApiResponse({
+                success: true,
+                data: {
+                  attempt_id: "attempt-1",
+                  clues_revealed: 2,
+                  clue: {
+                    clue_number: 2,
+                    content: "Platelet count is low",
+                    type: "clinical",
+                  },
+                },
+              }),
+            );
+          }
         }
 
-        if (url.includes("/api/v1/ai/explanation/disease-1")) {
+        if (String(input).includes("/api/v1/ai/explanation/disease-1")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -135,7 +131,7 @@ describe("QuizClient", () => {
           );
         }
 
-        return Promise.reject(new Error(`unexpected url: ${url}`));
+        return Promise.reject(new Error(`unexpected url: ${String(input)}`));
       }),
     );
   });
@@ -182,14 +178,22 @@ describe("QuizClient", () => {
     );
   });
 
-  it("reveals next clue", async () => {
+  it("reveals next clue when an incorrect diagnosis unlocks it", async () => {
     render(<QuizClient initialMode="daily" />);
 
     await waitFor(() => {
       expect(screen.queryByText("Fever for three days")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /reveal clue/i }));
+    // Clue 2 is locked before an incorrect guess
+    expect(screen.queryByText("Platelet count is low")).toBeFalsy();
+
+    fireEvent.change(screen.getByLabelText("Cari atau tulis nama penyakit"), {
+      target: { value: "Wrong Disease" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /submit diagnosis/i }),
+    );
 
     await waitFor(() => {
       expect(screen.queryByText("Platelet count is low")).toBeTruthy();
@@ -223,10 +227,9 @@ describe("QuizClient", () => {
   });
 
   it("redirects to login when quiz request fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string) => {
-        if (url.includes("/api/v1/quiz/daily")) {
+    vi.spyOn(global, "fetch").mockImplementation(
+      vi.fn((input: RequestInfo | URL) => {
+        if (String(input).includes("/api/v1/quiz/daily")) {
           return Promise.resolve(
             mockApiResponse(
               {
@@ -239,7 +242,7 @@ describe("QuizClient", () => {
           );
         }
 
-        return Promise.reject(new Error(`unexpected url: ${url}`));
+        return Promise.reject(new Error(`unexpected url: ${String(input)}`));
       }),
     );
 

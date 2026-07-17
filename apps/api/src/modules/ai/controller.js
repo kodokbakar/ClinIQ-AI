@@ -6,6 +6,38 @@ const uuid = require('uuid')
 
 const CACHE_TTL_SECONDS = 86400
 
+function safeParseJSON(raw) {
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim()
+  const match = cleaned.match(/\{[\s\S]*\}/)
+  const text = match ? match[0] : cleaned
+
+  // try direct parse
+  try { return JSON.parse(text) } catch {}
+
+  // try repair: close unterminated strings at end
+  const repaired = text
+    .replace(/(?<=[^\\])"(?=\s*[,\]\}]\s*$)/, '"') // ensure last string closed
+  try { return JSON.parse(repaired) } catch {}
+
+  // try repair: if missing closing } count open vs close
+  const opens = (text.match(/\{/g) || []).length
+  const closes = (text.match(/\}/g) || []).length
+  if (opens > closes) {
+    try { return JSON.parse(text + '}'.repeat(opens - closes)) } catch {}
+  }
+
+  // try repair: close unterminated strings by counting quotes
+  let fixed = text
+  //   if last char is not " but line ends with a value, close the string
+  fixed = fixed.replace(/:\s*"([^"]*)$/, ':\n"$1"')
+  try { return JSON.parse(fixed) } catch {}
+
+  throw new Error('Failed to parse AI response as JSON')
+}
+
 class Controller {
    /** GET /v1/ai/explanation/:disease_id?locale=id */
    static async getExplanation(req, res) {
@@ -75,33 +107,50 @@ Format your response as JSON:
          let completion
          try {
             completion = await aiClient.chat.completions.create({
-               model: process.env.AI_MODEL || 'meta-llama/llama-3.3-70b-instruct',
+               model: process.env.AI_MODEL || process.env.AI_COMBOS,
                messages: [{ role: 'user', content: prompt }],
                temperature: 0.3,
-               max_tokens: 500
+               max_tokens: 1500
             })
          } catch (error) {
             console.error('AI provider failure:', error.message)
-
             return res.status(HttpStatusCode.BadGateway).json({
                success: false,
                message: 'AI provider failed'
             })
          }
 
-         const explanation = JSON.parse(completion.choices[0].message.content)
+         const raw = completion.choices?.[0]?.message?.content || '{}'
+
+         let parsed
+         try {
+            parsed = safeParseJSON(raw)
+         } catch (parseErr) {
+            console.warn('First parse failed, retrying AI call...', parseErr.message)
+            const retryCompletion = await aiClient.chat.completions.create({
+               model: process.env.AI_MODEL || process.env.AI_COMBOS,
+               messages: [
+                  { role: 'system', content: 'You are a JSON generator. Return ONLY valid JSON, no markdown, no prose.' },
+                  { role: 'user', content: prompt },
+               ],
+               temperature: 0.2,
+               max_tokens: 1500
+            })
+            const retryRaw = retryCompletion.choices?.[0]?.message?.content || '{}'
+            parsed = safeParseJSON(retryRaw)
+         }
 
          const saved = await db.AIExplanation.create({
             disease_id,
             locale,
-            overview: explanation.overview,
-            pathophysiology: explanation.pathophysiology,
-            clinical_features: explanation.clinical_features,
-            diagnosis: explanation.diagnosis,
-            management: explanation.management,
-            prevention: explanation.prevention,
-            key_points: explanation.key_points,
-            ai_model_used: process.env.AI_MODEL || null
+            overview: parsed.overview,
+            pathophysiology: parsed.pathophysiology,
+            clinical_features: parsed.clinical_features,
+            diagnosis: parsed.diagnosis,
+            management: parsed.management,
+            prevention: parsed.prevention,
+            key_points: parsed.key_points,
+            ai_model_used: process.env.AI_MODEL || process.env.AI_COMBOS || null
          })
 
          await setCacheWithTTL(cacheKey, saved, CACHE_TTL_SECONDS)
