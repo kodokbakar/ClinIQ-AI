@@ -8,6 +8,7 @@
  *         id: { type: integer }
  *         name: { type: string }
  *         code: { type: string }
+ *         invite_code: { type: string }
  *         memberCount: { type: integer }
  *     CreateGroupRequest:
  *       type: object
@@ -18,6 +19,31 @@
 const Controller = require('./controller')
 const router = require('express').Router()
 const { authentication } = require('../../middleware/auth')
+
+/**
+ * @swagger
+ * /v1/groups/join:
+ *   post:
+ *     tags: [Groups]
+ *     summary: Join a group using an invite code
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [invite_code]
+ *             properties:
+ *               invite_code:
+ *                 type: string
+ *                 example: INVITEA1234
+ *     responses:
+ *       201: { description: Successfully joined group }
+ *       400: { description: Invite code is required }
+ *       404: { description: Group not found }
+ *       409: { description: Already a member }
+ */
 
 /**
  * @swagger
@@ -96,6 +122,7 @@ const { authentication } = require('../../middleware/auth')
  */
 router.post('/', authentication, Controller.create)
 router.get('/', authentication, Controller.list)
+router.post('/join', authentication, Controller.joinByCode)
 router.get('/:id', authentication, Controller.getById)
 router.post('/:id/join', authentication, Controller.join)
 router.post('/:id/leave', authentication, Controller.leave)

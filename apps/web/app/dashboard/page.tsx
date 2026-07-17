@@ -9,9 +9,18 @@ import {
   type PaginationMetadata,
   type QuizAttemptHistory,
 } from "../_lib/quiz-api";
-import "./dashboard-home.css";
+import {
+  getGroupById,
+  getMyGroups,
+  type GroupDetails,
+  type GroupSummary,
+} from "../_lib/groups-api";
 
+import "./dashboard-home.css";
+import { GroupMembersModal } from "../_components/groups/group-members-modal";
 import { DashboardHistory } from "../_components/dashboard/dashboard-history";
+import { DashboardGroupPanel } from "../_components/groups/dashboard-group-panel";
+import { GroupMembershipModal } from "../_components/groups/group-membership-modal";
 
 const scoreFormatter = new Intl.NumberFormat("id-ID");
 const HISTORY_PAGE_SIZE = 3;
@@ -26,6 +35,8 @@ type DashboardStats = {
 type DashboardState = {
   user: AuthUser;
   attempts: QuizAttemptHistory[];
+  group: GroupSummary | null;
+  groupDetails: GroupDetails | null;
   stats: DashboardStats;
   currentPage: number;
   totalPages: number;
@@ -43,12 +54,6 @@ const quizActions = [
     label: "Random Quiz",
     eyebrow: "new case",
     copy: "Ambil vignette acak yang belum pernah kamu kerjakan.",
-  },
-  {
-    href: "/groups/join",
-    label: "Join Group",
-    eyebrow: "study circle",
-    copy: "Masuk ke grup belajar untuk leaderboard dan latihan bersama.",
   },
 ];
 
@@ -81,22 +86,14 @@ function buildDashboardStats(
   };
 }
 
-function latestAttemptLabel(attempts: QuizAttemptHistory[]): string {
-  const latest = attempts[0];
-
-  if (!latest) return "Belum ada percobaan";
-  if (latest.is_correct === null) return "Kasus belum selesai";
-  if (latest.is_correct) return "Jawaban benar";
-
-  return "Butuh review ulang";
-}
-
 export default function DashboardPage() {
   const { replace } = useRouter();
   const [state, setState] = useState<DashboardState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [historyError, setHistoryError] = useState("");
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -104,18 +101,26 @@ export default function DashboardPage() {
     async function loadDashboard() {
       try {
         const user = await getCurrentUser();
-        const attemptsResult = await getMyAttempts(HISTORY_PAGE_SIZE, 1).catch(
-          () => ({
+        const [attemptsResult, groups] = await Promise.all([
+          getMyAttempts(HISTORY_PAGE_SIZE, 1).catch(() => ({
             data: [],
             metadata: undefined,
-          }),
-        );
+          })),
+          getMyGroups().catch(() => []),
+        ]);
+        const group = groups[0] ?? null;
+
+        const groupDetails = group
+          ? await getGroupById(group.id).catch(() => null)
+          : null;
 
         if (!isMounted) return;
 
         setState({
           user,
           attempts: attemptsResult.data,
+          group,
+          groupDetails,
           stats: buildDashboardStats(
             attemptsResult.data,
             attemptsResult.metadata,
@@ -179,6 +184,35 @@ export default function DashboardPage() {
     }
   }
 
+  function handleGroupJoined(
+    group: GroupSummary,
+    groupDetails: GroupDetails | null,
+  ) {
+    setState((current) => {
+      if (!current) return current;
+
+      return {
+        ...current,
+        group,
+        groupDetails,
+      };
+    });
+  }
+
+  function handleGroupLeft() {
+    setIsMembersModalOpen(false);
+
+    setState((current) => {
+      if (!current) return current;
+
+      return {
+        ...current,
+        group: null,
+        groupDetails: null,
+      };
+    });
+  }
+
   if (isLoading) {
     return (
       <section className="diagnostic-panel diagnostic-loading">
@@ -196,7 +230,15 @@ export default function DashboardPage() {
     );
   }
 
-  const { user, attempts, stats, currentPage, totalPages } = state;
+  const {
+    user,
+    attempts,
+    group,
+    groupDetails,
+    stats,
+    currentPage,
+    totalPages,
+  } = state;
   const roleName = getRoleName(user);
 
   return (
@@ -212,10 +254,21 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="diagnostic-profile-card" aria-label="Profil belajar">
-          <span>{user.name.slice(0, 1).toUpperCase()}</span>
-          <strong>{roleName}</strong>
-          <small>{user.email}</small>
+        <div className="diagnostic-profile-stack grid gap-2">
+          <div className="diagnostic-profile-card" aria-label="Profil belajar">
+            <span className="diagnostic-profile-card__avatar">
+              {user.name.slice(0, 1).toUpperCase()}
+            </span>
+
+            <strong>{roleName}</strong>
+            <small>{user.email}</small>
+          </div>
+
+          <DashboardGroupPanel
+            group={group}
+            onMembershipAction={() => setIsGroupModalOpen(true)}
+            onViewMembers={() => setIsMembersModalOpen(true)}
+          />
         </div>
       </div>
 
@@ -238,11 +291,19 @@ export default function DashboardPage() {
           <div className="diagnostic-section-head">
             <div>
               <p className="diagnostic-eyebrow">choose your next move</p>
-              <h2>Mulai latihan atau masuk grup belajar.</h2>
+              <h2>
+                {group
+                  ? "Lanjutkan latihan klinis."
+                  : "Mulai latihan atau masuk grup belajar."}
+              </h2>
             </div>
           </div>
 
-          <div className="dashboard-action-grid">
+          <div
+            className={`dashboard-action-grid${
+              group ? " dashboard-action-grid--compact" : ""
+            }`}
+          >
             {quizActions.map((action) => (
               <Link
                 key={action.href}
@@ -254,26 +315,22 @@ export default function DashboardPage() {
                 <p>{action.copy}</p>
               </Link>
             ))}
+
+            {!group ? (
+              <button
+                type="button"
+                className="dashboard-action-card"
+                onClick={() => setIsGroupModalOpen(true)}
+              >
+                <span>study circle</span>
+                <strong>Join Group</strong>
+                <p>
+                  Masuk ke grup belajar untuk leaderboard dan latihan bersama.
+                </p>
+              </button>
+            ) : null}
           </div>
         </section>
-
-        <aside className="diagnostic-panel">
-          <p className="diagnostic-eyebrow">learning pulse</p>
-          <h2 className="diagnostic-side-title">
-            {latestAttemptLabel(attempts)}
-          </h2>
-
-          <div className="learning-flow" aria-label="Alur belajar">
-            {[
-              "Read clue",
-              "Form hypothesis",
-              "Submit diagnosis",
-              "Study AI note",
-            ].map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-        </aside>
       </div>
 
       <DashboardHistory
@@ -283,6 +340,19 @@ export default function DashboardPage() {
         isLoadingMore={isLoadingMore}
         error={historyError}
         onLoadMore={handleLoadMore}
+      />
+      <GroupMembersModal
+        isOpen={isMembersModalOpen}
+        group={group}
+        details={groupDetails}
+        onClose={() => setIsMembersModalOpen(false)}
+      />
+      <GroupMembershipModal
+        isOpen={isGroupModalOpen}
+        group={group}
+        onClose={() => setIsGroupModalOpen(false)}
+        onJoined={handleGroupJoined}
+        onLeft={handleGroupLeft}
       />
     </section>
   );

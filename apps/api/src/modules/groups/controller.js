@@ -1,12 +1,82 @@
 const db = require('../../../db/models')
 const { HttpStatusCode } = require('axios')
 
+function normalizeInviteCode(value) {
+   return typeof value === 'string' ? value.trim().toUpperCase() : ''
+}
+
+async function addGroupMember(group, userId) {
+   const existing = await db.GroupMember.findOne({
+      where: {
+         group_id: group.id,
+         user_id: userId
+      }
+   })
+
+   if (existing) {
+      const error = new Error('Already a member of this group')
+      error.code = HttpStatusCode.Conflict
+      throw error
+   }
+
+   await db.sequelize.transaction(async (transaction) => {
+      await db.GroupMember.create(
+         {
+            group_id: group.id,
+            user_id: userId,
+            is_admin: false
+         },
+         { transaction }
+      )
+
+      await db.sequelize.query(
+         `
+            UPDATE groups
+            SET member_count = member_count + 1
+            WHERE id = :id
+         `,
+         {
+            replacements: { id: group.id },
+            transaction
+         }
+      )
+   })
+
+   return {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      owner_id: group.owner_id,
+      member_count: Number(group.member_count) + 1,
+      my_role: 'member'
+   }
+}
+
+function sendJoinError(res, err) {
+   if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(HttpStatusCode.Conflict).json({
+         success: false,
+         message: 'Already a member of this group'
+      })
+   }
+
+   console.error('Join group error:', err)
+
+   return res
+      .status(err.code || HttpStatusCode.InternalServerError)
+      .json({
+         success: false,
+         message: err.message
+      })
+}
+
 class Controller {
    /** POST /v1/groups — Create a new group */
    static async create(req, res) {
       try {
          const userId = req.user.id
          const { name, description, invite_code } = req.body
+         const normalizedInviteCode = normalizeInviteCode(invite_code)
 
          if (!name) {
             return res.status(HttpStatusCode.BadRequest).json({
@@ -19,7 +89,7 @@ class Controller {
             name,
             description: description || '',
             invite_code:
-               invite_code ||
+               normalizedInviteCode ||
                Math.random().toString(36).substring(2, 10).toUpperCase(),
             owner_id: userId
          })
@@ -158,14 +228,63 @@ class Controller {
       }
    }
 
-   /** POST /v1/groups/:id/join — Join group via invite code */
+   /** POST /v1/groups/join — Join group using invite code only */
+   static async joinByCode(req, res) {
+      try {
+         const userId = req.user.id
+         const inviteCode = normalizeInviteCode(req.body.invite_code)
+
+         if (!inviteCode) {
+            return res.status(HttpStatusCode.BadRequest).json({
+               success: false,
+               message: 'Invite code is required'
+            })
+         }
+
+         const group = await db.Group.findOne({
+            where: {
+               invite_code: inviteCode
+            }
+         })
+
+         if (!group) {
+            return res.status(HttpStatusCode.NotFound).json({
+               success: false,
+               message: 'Group not found for this invite code'
+            })
+         }
+
+         const joinedGroup = await addGroupMember(group, userId)
+
+         return res.status(HttpStatusCode.Created).json({
+            success: true,
+            data: {
+               message: 'Successfully joined group',
+               group_id: group.id,
+               group: joinedGroup
+            }
+         })
+      } catch (err) {
+         return sendJoinError(res, err)
+      }
+   }
+
+   /** POST /v1/groups/:id/join — Join group via ID and invite code */
    static async join(req, res) {
       try {
          const userId = req.user.id
          const { id } = req.params
-         const { invite_code } = req.body
+         const inviteCode = normalizeInviteCode(req.body.invite_code)
+
+         if (!inviteCode) {
+            return res.status(HttpStatusCode.BadRequest).json({
+               success: false,
+               message: 'Invite code is required'
+            })
+         }
 
          const group = await db.Group.findByPk(id)
+
          if (!group) {
             return res.status(HttpStatusCode.NotFound).json({
                success: false,
@@ -173,59 +292,25 @@ class Controller {
             })
          }
 
-         if (group.invite_code !== invite_code) {
+         if (normalizeInviteCode(group.invite_code) !== inviteCode) {
             return res.status(HttpStatusCode.BadRequest).json({
                success: false,
                message: 'Invalid invite code'
             })
          }
 
-         const existing = await db.GroupMember.findOne({
-            where: { group_id: id, user_id: userId }
-         })
+         const joinedGroup = await addGroupMember(group, userId)
 
-         if (existing) {
-            return res.status(HttpStatusCode.Conflict).json({
-               success: false,
-               message: 'Already a member of this group'
-            })
-         }
-
-         await db.sequelize.transaction(async (transaction) => {
-            await db.GroupMember.create(
-               {
-                  group_id: id,
-                  user_id: userId,
-                  is_admin: false
-               },
-               { transaction }
-            )
-
-            await db.sequelize.query(
-               'UPDATE groups SET member_count = member_count + 1 WHERE id = :id',
-               {
-                  replacements: { id },
-                  transaction
-               }
-            )
-         })
-
-         res.status(HttpStatusCode.Created).json({
+         return res.status(HttpStatusCode.Created).json({
             success: true,
-            data: { message: 'Successfully joined group', group_id: id }
+            data: {
+               message: 'Successfully joined group',
+               group_id: group.id,
+               group: joinedGroup
+            }
          })
       } catch (err) {
-         if (err.name === 'SequelizeUniqueConstraintError') {
-            return res.status(HttpStatusCode.Conflict).json({
-               success: false,
-               message: 'Already a member of this group'
-            })
-         }
-         console.error('Join group error:', err)
-         res.status(err.code || HttpStatusCode.InternalServerError).json({
-            success: false,
-            message: err.message
-         })
+         return sendJoinError(res, err)
       }
    }
 

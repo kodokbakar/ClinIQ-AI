@@ -457,4 +457,63 @@ describe('groups API', () => {
       expect(response.body.data.message).toBe('Group deleted')
       expect(deletedGroup).toBeNull()
    })
+
+   it('joins group using invite code without group id', async () => {
+      const group = await createGroup({
+         inviteCode: 'GRPTEST1'
+      })
+
+      const response = await authedPost(
+         '/api/v1/groups/join',
+         {
+            invite_code: '  grptest1  '
+         },
+         cookies.member
+      )
+
+      const membership = await db.GroupMember.findOne({
+         where: {
+            group_id: group.id,
+            user_id: users.member.id
+         }
+      })
+
+      const updatedGroup = await db.Group.findByPk(group.id)
+
+      expect(response.status).toBe(201)
+      expect(response.body.success).toBe(true)
+      expect(response.body.data.group_id).toBe(group.id)
+      expect(response.body.data.group.name).toBe(group.name)
+      expect(response.body.data.group.my_role).toBe('member')
+      expect(membership).toBeTruthy()
+      expect(updatedGroup.member_count).toBe(2)
+   })
+
+   it('join by code validates invite code', async () => {
+      const response = await authedPost(
+         '/api/v1/groups/join',
+         {},
+         cookies.member
+      )
+
+      expect(response.status).toBe(400)
+      expect(response.body.success).toBe(false)
+      expect(response.body.message).toBe('Invite code is required')
+   })
+
+   it('join by code returns 404 for unknown code', async () => {
+      const response = await authedPost(
+         '/api/v1/groups/join',
+         {
+            invite_code: 'UNKNOWNCODE'
+         },
+         cookies.member
+      )
+
+      expect(response.status).toBe(404)
+      expect(response.body.success).toBe(false)
+      expect(response.body.message).toBe(
+         'Group not found for this invite code'
+      )
+   })
 })

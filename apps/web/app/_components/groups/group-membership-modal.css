@@ -1,0 +1,197 @@
+.group-modal-backdrop {
+  background: rgba(31, 36, 33, 0.58);
+  backdrop-filter: blur(10px);
+  animation: group-modal-fade 180ms ease both;
+}
+
+.group-modal {
+  max-height: calc(100svh - 2rem);
+  overflow-y: auto;
+  border: 1px solid var(--auth-line);
+  border-radius: var(--auth-radius-soft);
+  background: var(--auth-paper);
+  box-shadow: 0 2rem 7rem rgba(31, 36, 33, 0.24);
+  color: var(--auth-ink);
+  padding: clamp(1rem, 3vw, 1.75rem);
+  animation: group-modal-rise 240ms var(--auth-ease-out) both;
+}
+
+.group-modal__header {
+  margin-bottom: 1.4rem;
+}
+
+.group-modal__header h2 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: var(--font-display), serif;
+  font-size: clamp(2.8rem, 8vw, 4.8rem);
+  font-weight: 900;
+  line-height: 0.8;
+  letter-spacing: -0.085em;
+}
+
+.group-modal__close {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.6rem;
+  aspect-ratio: 1;
+  place-items: center;
+  cursor: pointer;
+  border: 1px solid var(--auth-line);
+  border-radius: 999px;
+  background: rgba(255, 249, 238, 0.72);
+  color: var(--auth-ink);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.group-modal__copy {
+  margin: 0;
+  color: var(--auth-ink-soft);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.group-modal__form label {
+  color: var(--auth-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.group-modal__form input {
+  width: 100%;
+  border: 1px solid var(--auth-line);
+  border-radius: 1rem;
+  background: rgba(255, 249, 238, 0.72);
+  color: var(--auth-ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 1.15rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  outline: 0;
+  padding: 1rem;
+  text-transform: uppercase;
+}
+
+.group-modal__form input:focus-visible {
+  border-color: var(--auth-blue);
+  box-shadow: 0 0 0 4px rgba(27, 60, 255, 0.14);
+}
+
+.group-modal__current-group {
+  display: grid;
+  border: 1px solid var(--auth-line);
+  border-radius: 1rem;
+  background: rgba(15, 95, 92, 0.08);
+  padding: 1rem;
+}
+
+.group-modal__current-group span {
+  color: var(--auth-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.group-modal__current-group strong {
+  margin-top: 0.55rem;
+  font-family: var(--font-display), serif;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+
+.group-modal__current-group small {
+  margin-top: 0.35rem;
+  color: var(--auth-muted);
+  font-weight: 700;
+}
+
+.group-modal__notice,
+.group-modal__error {
+  margin: 0;
+  border: 1px solid rgba(199, 67, 23, 0.24);
+  border-radius: 0.9rem;
+  background: rgba(241, 90, 36, 0.1);
+  color: var(--auth-orange-dark);
+  padding: 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.group-modal__primary,
+.group-modal__secondary,
+.group-modal__danger {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 900;
+  padding: 0.8rem 1rem;
+}
+
+.group-modal__primary {
+  border: 0;
+  background: var(--auth-ink);
+  color: var(--auth-cream);
+}
+
+.group-modal__secondary {
+  border: 1px solid var(--auth-line);
+  background: transparent;
+  color: var(--auth-ink);
+}
+
+.group-modal__danger {
+  border: 0;
+  background: var(--auth-orange-dark);
+  color: var(--auth-cream);
+}
+
+.group-modal__primary:disabled,
+.group-modal__secondary:disabled,
+.group-modal__danger:disabled,
+.group-modal__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.group-modal__primary:focus-visible,
+.group-modal__secondary:focus-visible,
+.group-modal__danger:focus-visible,
+.group-modal__close:focus-visible {
+  outline: 3px solid rgba(27, 60, 255, 0.5);
+  outline-offset: 3px;
+}
+
+@keyframes group-modal-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes group-modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.8rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
