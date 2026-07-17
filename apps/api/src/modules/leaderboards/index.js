@@ -20,8 +20,9 @@
  */
 const Controller = require('./controller')
 const router = require('express').Router()
+const { authentication } = require('../../middleware/auth')
 
-router.get('/global', Controller.getGlobal)
-router.get('/group/:group_id', Controller.getByGroup)
+router.get('/global', authentication, Controller.getGlobal)
+router.get('/group/:group_id', authentication, Controller.getByGroup)
 
 module.exports = router

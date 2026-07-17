@@ -48,24 +48,6 @@ const { authentication } = require('../../middleware/auth')
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/QuizClue'
- *     RevealClueRequest:
- *       type: object
- *       required: [attempt_id]
- *       properties:
- *         attempt_id:
- *           type: string
- *           format: uuid
- *     RevealClueResponse:
- *       type: object
- *       properties:
- *         attempt_id:
- *           type: string
- *           format: uuid
- *         clues_revealed:
- *           type: integer
- *           example: 2
- *         clue:
- *           $ref: '#/components/schemas/QuizClue'
  *     SubmitDiagnosisRequest:
  *       type: object
  *       required: [attempt_id, diagnosis]
@@ -142,48 +124,11 @@ router.get('/daily', authentication, Controller.daily)
 
 /**
  * @swagger
- * /v1/quiz/reveal-clue:
- *   post:
- *     tags: [Quiz]
- *     summary: Reveal the next clue
- *     description: Reveals one additional clue for an active attempt.
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RevealClueRequest'
- *     responses:
- *       200:
- *         description: Next clue revealed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/RevealClueResponse'
- *       400:
- *         description: Missing attempt_id, completed attempt, or max clues reached
- *       401:
- *         description: Authentication required
- *       404:
- *         description: Attempt not found
- */
-router.post('/reveal-clue', authentication, Controller.revealClue)
-
-/**
- * @swagger
  * /v1/quiz/submit-diagnosis:
  *   post:
  *     tags: [Quiz]
  *     summary: Submit diagnosis
- *     description: Submits the final diagnosis, marks the attempt as completed, assigns score, and updates leaderboard when correct.
+ *     description: Submits a diagnosis. Wrong answers reveal the next clue until max clues; correct answers complete the attempt and score it.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -195,16 +140,6 @@ router.post('/reveal-clue', authentication, Controller.revealClue)
  *     responses:
  *       200:
  *         description: Diagnosis submitted
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/SubmitDiagnosisResponse'
  *       400:
  *         description: Missing fields or completed attempt
  *       401:
