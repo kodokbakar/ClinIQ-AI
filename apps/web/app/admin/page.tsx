@@ -9,5 +9,5 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  return <AdminClientPage user={user} />;
+  return <AdminClientPage />;
 }

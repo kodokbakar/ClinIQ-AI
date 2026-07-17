@@ -48,17 +48,17 @@ describe("QuizClient", () => {
   beforeEach(() => {
     replaceMock.mockReset();
     vi.spyOn(global, "fetch").mockImplementation(
-      vi.fn((url: string, init?: RequestInit) => {
-        if (url.includes("/api/v1/quiz/daily")) {
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes("/api/v1/quiz/daily")) {
           return Promise.resolve(mockApiResponse(quizResponse, true));
         }
 
-        if (url.includes("/api/v1/quiz/random")) {
+        if (String(input).includes("/api/v1/quiz/random")) {
           return Promise.resolve(mockApiResponse(quizResponse, true));
         }
 
 
-if (url.includes("/api/v1/diseases/search")) {
+if (String(input).includes("/api/v1/diseases/search")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -74,7 +74,7 @@ if (url.includes("/api/v1/diseases/search")) {
         }
 
 
-        if (url.includes("/api/v1/quiz/submit-diagnosis")) {
+        if (String(input).includes("/api/v1/quiz/submit-diagnosis")) {
           expect(init?.method).toBe("POST");
           const body = JSON.parse(init?.body as string);
           
@@ -112,7 +112,7 @@ if (url.includes("/api/v1/diseases/search")) {
           }
         }
 
-        if (url.includes("/api/v1/ai/explanation/disease-1")) {
+        if (String(input).includes("/api/v1/ai/explanation/disease-1")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -131,7 +131,7 @@ if (url.includes("/api/v1/diseases/search")) {
           );
         }
 
-        return Promise.reject(new Error(`unexpected url: ${url}`));
+        return Promise.reject(new Error(`unexpected url: ${String(input)}`));
       }),
     );
   });
@@ -228,8 +228,8 @@ if (url.includes("/api/v1/diseases/search")) {
 
   it("redirects to login when quiz request fails", async () => {
     vi.spyOn(global, "fetch").mockImplementation(
-      vi.fn((url: string) => {
-        if (url.includes("/api/v1/quiz/daily")) {
+      vi.fn((input: RequestInfo | URL) => {
+        if (String(input).includes("/api/v1/quiz/daily")) {
           return Promise.resolve(
             mockApiResponse(
               {
@@ -242,7 +242,7 @@ if (url.includes("/api/v1/diseases/search")) {
           );
         }
 
-        return Promise.reject(new Error(`unexpected url: ${url}`));
+        return Promise.reject(new Error(`unexpected url: ${String(input)}`));
       }),
     );
 

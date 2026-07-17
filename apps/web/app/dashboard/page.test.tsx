@@ -112,8 +112,8 @@ describe("Dashboard page", () => {
     replaceMock.mockReset();
 
     vi.spyOn(global, "fetch").mockImplementation(
-      vi.fn((url: string) => {
-        if (url.includes("/api/v1/auth/me")) {
+      vi.fn((input: RequestInfo | URL) => {
+        if (String(input).includes("/api/v1/auth/me")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -123,8 +123,8 @@ describe("Dashboard page", () => {
           );
         }
 
-        if (url.includes("/api/v1/quiz/attempts/me")) {
-          const isSecondPage = url.includes("page=2");
+        if (String(input).includes("/api/v1/quiz/attempts/me")) {
+          const isSecondPage = String(input).includes("page=2");
 
           return Promise.resolve(
             mockApiResponse({
@@ -144,7 +144,7 @@ describe("Dashboard page", () => {
           );
         }
 
-        if (url.includes("/api/v1/groups/group-1")) {
+        if (String(input).includes("/api/v1/groups/group-1")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -154,7 +154,7 @@ describe("Dashboard page", () => {
           );
         }
 
-        if (url.includes("/api/v1/groups")) {
+        if (String(input).includes("/api/v1/groups")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -164,7 +164,7 @@ describe("Dashboard page", () => {
           );
         }
 
-        return Promise.reject(new Error(`unexpected url: ${url}`));
+        return Promise.reject(new Error(`unexpected url: ${String(input)}`));
       }),
     );
   });
@@ -272,8 +272,8 @@ describe("Dashboard page", () => {
   it("redirects to login when current user request fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn((url: string) => {
-        if (url.includes("/api/v1/auth/me")) {
+      vi.fn((input: RequestInfo | URL) => {
+        if (String(input).includes("/api/v1/auth/me")) {
           return Promise.resolve(
             mockApiResponse(
               {
@@ -286,7 +286,7 @@ describe("Dashboard page", () => {
           );
         }
 
-        return Promise.reject(new Error(`unexpected url: ${url}`));
+        return Promise.reject(new Error(`unexpected url: ${String(input)}`));
       }),
     );
 
@@ -334,8 +334,8 @@ describe("Dashboard page", () => {
   it("shows solo player when the user has no group", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn((url: string) => {
-        if (url.includes("/api/v1/auth/me")) {
+      vi.fn((input: RequestInfo | URL) => {
+        if (String(input).includes("/api/v1/auth/me")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -345,7 +345,7 @@ describe("Dashboard page", () => {
           );
         }
 
-        if (url.includes("/api/v1/quiz/attempts/me")) {
+        if (String(input).includes("/api/v1/quiz/attempts/me")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -364,7 +364,7 @@ describe("Dashboard page", () => {
           );
         }
 
-        if (url.includes("/api/v1/groups")) {
+        if (String(input).includes("/api/v1/groups")) {
           return Promise.resolve(
             mockApiResponse({
               success: true,
@@ -374,7 +374,7 @@ describe("Dashboard page", () => {
           );
         }
 
-        return Promise.reject(new Error(`unexpected url: ${url}`));
+        return Promise.reject(new Error(`unexpected url: ${String(input)}`));
       }),
     );
 
