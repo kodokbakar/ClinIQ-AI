@@ -10,12 +10,11 @@ import {
   uploadICD,
   type AdminUser,
 } from "../_lib/admin-api";
-import { type AuthUser } from "../_lib/auth-api";
 import { searchDiseases, type DiseaseSearchResult } from "../_lib/quiz-api";
 import "./../dashboard/dashboard-home.css";
 import "./../dashboard/dashboard-shell.css";
 
-type Props = { user: AuthUser };
+
 
 export default function AdminClientPage() {
   const [icdFile, setIcdFile] = useState<File | null>(null);
