@@ -21,7 +21,7 @@ function mockApiResponse(body: unknown, ok = true): Response {
 describe("Register page", () => {
   beforeEach(() => {
     pushMock.mockReset();
-    vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(global, "fetch").mockImplementation(vi.fn());
   });
 
   it("renders register copy and form fields", () => {

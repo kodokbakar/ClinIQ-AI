@@ -78,6 +78,11 @@ export function loginUser(payload: LoginPayload): Promise<AuthUser> {
   return requestJson<AuthUser>("/api/v1/auth/login", payload);
 }
 
+export type ChangePasswordPayload = {
+  oldPassword: string;
+  newPassword: string;
+};
+
 export function registerUser(payload: RegisterPayload): Promise<AuthUser> {
   return requestJson<AuthUser>("/api/v1/auth", payload);
 }
@@ -86,13 +91,36 @@ export function logoutUser(): Promise<boolean> {
   return requestJson<boolean>("/api/v1/auth/logout", {});
 }
 
-export async function getCurrentUser(): Promise<AuthUser> {
+export function changePassword(
+  payload: ChangePasswordPayload,
+): Promise<boolean> {
+  return requestJson<boolean>("/api/v1/auth/change-password", payload);
+}
+
+export async function getCurrentUser(cookieHeader?: string): Promise<AuthUser> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (cookieHeader) headers.Cookie = cookieHeader;
+
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
-    headers: {
-      Accept: "application/json",
-    },
+    headers,
     credentials: "include",
+    cache: "no-store",
   });
 
   return parseApiResponse<AuthUser>(response);
+}
+
+export async function getCurrentUserServer(): Promise<AuthUser | null> {
+  const { cookies } = await import("next/headers");
+  const store = await cookies();
+  const cookieHeader = store
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  if (!cookieHeader) return null;
+  try {
+    return await getCurrentUser(cookieHeader);
+  } catch {
+    return null;
+  }
 }

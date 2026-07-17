@@ -228,7 +228,7 @@ class Controller {
 
          const role = user.role_id
             ? await db.role.findByPk(user.role_id, {
-               attributes: ['id', 'name']
+               attributes: ['id', 'name', 'is_superadmin']
             })
             : null
 
@@ -239,12 +239,14 @@ class Controller {
             status: user.status,
             avatar: user.avatar,
             role_id: user.role_id,
+            is_superadmin: role?.is_superadmin || false,
             last_updated_password: user.last_updated_password,
             last_activity: user.last_activity,
             role: role
                ? {
                   id: role.id,
-                  name: role.name
+                  name: role.name,
+                  is_superadmin: role.is_superadmin
                }
                : null
          }

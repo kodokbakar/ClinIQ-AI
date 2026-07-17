@@ -7,7 +7,6 @@ import {
   getAIExplanation,
   getQuizByMode,
   isEmptyQuiz,
-  revealNextClue,
   searchDiseases,
   submitDiagnosis,
   type AIExplanation,
@@ -52,7 +51,7 @@ function resultCopy(result: SubmitDiagnosisResult): string {
     return `Jawaban benar. Kamu mendapat ${result.score} poin dengan ${result.clues_revealed} clue terbuka.`;
   }
 
-  return `Jawabanmu belum tepat. Diagnosis yang benar adalah ${result.correct_disease}. Pakai penjelasan di bawah untuk review.`;
+  return `Jawabanmu belum tepat. Diagnosis yang benar adalah ${result.correct_disease?.name}. Pakai penjelasan di bawah untuk review.`;
 }
 
 function listItems(items?: string[] | null) {
@@ -71,7 +70,6 @@ export function QuizClient({ initialMode }: QuizClientProps) {
   const [result, setResult] = useState<SubmitDiagnosisResult | null>(null);
   const [explanation, setExplanation] = useState<AIExplanation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRevealing, setIsRevealing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [error, setError] = useState("");
@@ -85,7 +83,13 @@ export function QuizClient({ initialMode }: QuizClientProps) {
         setError("");
         setIsLoading(true);
 
-        const nextQuiz = await getQuizByMode(initialMode);
+        let nextQuiz = await getQuizByMode(initialMode);
+        let retries = 0;
+        while (isEmptyQuiz(nextQuiz) && retries < 5) {
+          await new Promise((r) => setTimeout(r, 3000));
+          nextQuiz = await getQuizByMode(initialMode);
+          retries++;
+        }
 
         if (!isMounted) return;
 
@@ -100,9 +104,7 @@ export function QuizClient({ initialMode }: QuizClientProps) {
 
         if (nextQuiz.is_completed && typeof nextQuiz.is_correct === "boolean") {
           setResult({
-            attempt_id: nextQuiz.attempt_id,
             is_correct: nextQuiz.is_correct,
-            correct_disease: "",
             score: nextQuiz.score ?? 0,
             clues_revealed: nextQuiz.clues_revealed,
           });
@@ -156,47 +158,7 @@ export function QuizClient({ initialMode }: QuizClientProps) {
     [quiz],
   );
 
-  const canReveal =
-    Boolean(quiz) &&
-    !quiz?.is_completed &&
-    !result &&
-    revealedClues.length < (quiz?.clues.length ?? 0);
-
-  async function handleRevealClue() {
-    if (!quiz || !canReveal) return;
-
-    try {
-      setError("");
-      setIsRevealing(true);
-
-      const revealed = await revealNextClue(quiz.attempt_id);
-
-      setQuiz((current) => {
-        if (!current) return current;
-
-        return {
-          ...current,
-          clues_revealed: revealed.clues_revealed,
-          clues: current.clues.map((clue) =>
-            clue.clue_number === revealed.clue?.clue_number
-              ? {
-                  ...revealed.clue,
-                  is_revealed: true,
-                }
-              : clue,
-          ),
-        };
-      });
-    } catch (revealError) {
-      setError(
-        revealError instanceof Error
-          ? revealError.message
-          : "Clue gagal dibuka.",
-      );
-    } finally {
-      setIsRevealing(false);
-    }
-  }
+  const maxClues = quiz?.clues.length ?? 0;
 
   async function loadExplanation(correctDisease: string) {
     try {
@@ -248,29 +210,59 @@ export function QuizClient({ initialMode }: QuizClientProps) {
       setError("");
       setIsSubmitting(true);
 
-      const submitted = await submitDiagnosis({
+      const response = await submitDiagnosis({
         attempt_id: quiz.attempt_id,
         diagnosis: submittedDiagnosis,
       });
 
-      setResult(submitted);
+      // Case 1: Incorrect, but new clue is revealed
+      if (response.clue) {
+        setQuiz((current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            clues_revealed: response.clues_revealed ?? current.clues_revealed,
+            clues: current.clues.map((c) =>
+              c.clue_number === response.clue?.clue_number
+                ? { ...response.clue, is_revealed: true }
+                : c
+            ),
+          };
+        });
+        // Clear input for next guess
+        setDiagnosis("");
+        setSelectedDisease(null);
+        // Maybe a temporary toast/notification here? For now, just updates clues.
+        return;
+      }
+
+      // Case 2: Final result (correct or incorrect on last clue)
+      const finalResult: SubmitDiagnosisResult = {
+        is_correct: response.is_correct,
+        score: response.score ?? 0,
+        clues_revealed: quiz.clues_revealed,
+        correct_disease: response.correct_disease,
+      };
+
       setQuiz((current) =>
         current
           ? {
               ...current,
               is_completed: true,
-              is_correct: submitted.is_correct,
-              score: submitted.score,
+              is_correct: finalResult.is_correct,
+              score: finalResult.score,
             }
-          : current,
+          : current
       );
-
-      await loadExplanation(submitted.correct_disease);
+      setResult(finalResult);
+      if (finalResult.correct_disease?.name) {
+        await loadExplanation(finalResult.correct_disease.name);
+      }
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Diagnosis gagal dikirim.",
+          : "Diagnosis gagal dikirim."
       );
     } finally {
       setIsSubmitting(false);
@@ -283,12 +275,53 @@ export function QuizClient({ initialMode }: QuizClientProps) {
     setSuggestions([]);
   }
 
+  async function handleNext() {
+    setQuiz(null);
+    setResult(null);
+    setExplanation(null);
+    setDiagnosis("");
+    setSelectedDisease(null);
+    setError("");
+    setExplanationError("");
+    setIsEmpty(false);
+    setIsLoading(true);
+
+    try {
+      let nextQuiz = await getQuizByMode("random");
+      let retries = 0;
+      while (isEmptyQuiz(nextQuiz) && retries < 5) {
+        await new Promise((r) => setTimeout(r, 3000));
+        nextQuiz = await getQuizByMode("random");
+        retries++;
+      }
+
+      if (isEmptyQuiz(nextQuiz)) {
+        setQuiz(null);
+        setIsEmpty(true);
+        return;
+      }
+
+      setQuiz(nextQuiz);
+      setIsEmpty(false);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Kasus gagal dimuat.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const isRetrying = isLoading && quiz === null && !isEmpty;
+
   if (isLoading) {
     return (
       <main className="quiz-screen px-3 py-3 sm:px-5 sm:py-5">
         <section className="quiz-panel quiz-loading">
           <p className="diagnostic-eyebrow">Memuat quiz</p>
-          <h1>Menyiapkan kasus...</h1>
+          <h1>{isRetrying ? "Mengenerate pertanyaan baru, mohon tunggu..." : "Menyiapkan kasus..."}</h1>
         </section>
       </main>
     );
@@ -347,18 +380,12 @@ export function QuizClient({ initialMode }: QuizClientProps) {
                   <p className="diagnostic-eyebrow">case clues</p>
                   <h2>Petunjuk yang sudah terbuka.</h2>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleRevealClue}
-                  disabled={!canReveal || isRevealing}
-                  className="diagnostic-action"
-                >
-                  {isRevealing ? "Membuka..." : "Reveal clue"}
-                </button>
               </div>
 
               <div className="quiz-clue-grid" aria-label="Daftar clue">
+                <div className="quiz-diagnosis-header">
+                  <span>What&apos;s the Diagnosis?</span>
+                </div>
                 {quiz.clues.map((clue) => (
                   <article
                     key={clue.clue_number}
@@ -432,7 +459,7 @@ export function QuizClient({ initialMode }: QuizClientProps) {
                   aria-label="Hasil diagnosis"
                 >
                   <span>{resultLabel(result)}</span>
-                  <h3>{result.correct_disease || "Attempt selesai"}</h3>
+                  <h3>{result.correct_disease?.name || "Attempt selesai"}</h3>
                   <p>{resultCopy(result)}</p>
                 </section>
               ) : null}
@@ -440,7 +467,7 @@ export function QuizClient({ initialMode }: QuizClientProps) {
           </div>
         ) : null}
 
-        {result ? (
+        {result && (result.is_correct || revealedClues.length >= maxClues) ? (
           <section className="quiz-panel quiz-explanation">
             <div className="quiz-section-head">
               <div>
@@ -500,6 +527,18 @@ export function QuizClient({ initialMode }: QuizClientProps) {
               </div>
             ) : null}
           </section>
+        ) : null}
+
+        {result && initialMode === "random" && !isLoading ? (
+          <div className="quiz-next flex justify-center pt-4">
+            <button
+              type="button"
+              onClick={handleNext}
+              className="quiz-primary-link"
+            >
+              Next Quiz →
+            </button>
+          </div>
         ) : null}
       </section>
     </main>

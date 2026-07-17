@@ -111,8 +111,7 @@ describe("Dashboard page", () => {
   beforeEach(() => {
     replaceMock.mockReset();
 
-    vi.stubGlobal(
-      "fetch",
+    vi.spyOn(global, "fetch").mockImplementation(
       vi.fn((url: string) => {
         if (url.includes("/api/v1/auth/me")) {
           return Promise.resolve(

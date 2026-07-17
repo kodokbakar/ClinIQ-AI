@@ -20,6 +20,7 @@ import "./dashboard-home.css";
 import { GroupMembersModal } from "../_components/groups/group-members-modal";
 import { DashboardHistory } from "../_components/dashboard/dashboard-history";
 import { DashboardGroupPanel } from "../_components/groups/dashboard-group-panel";
+import { DashboardLeaderboard } from "../_components/dashboard/dashboard-leaderboard";
 import { GroupMembershipModal } from "../_components/groups/group-membership-modal";
 
 const scoreFormatter = new Intl.NumberFormat("id-ID");
@@ -341,6 +342,9 @@ export default function DashboardPage() {
         error={historyError}
         onLoadMore={handleLoadMore}
       />
+
+      <DashboardLeaderboard group={group} />
+
       <GroupMembersModal
         isOpen={isMembersModalOpen}
         group={group}
