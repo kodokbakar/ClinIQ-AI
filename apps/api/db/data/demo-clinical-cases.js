@@ -170,6 +170,346 @@ const clinicalCases = [
                'Darah menunjukkan leukositosis neutrofilik dan foto toraks memperlihatkan konsolidasi pada lobus bawah paru kanan.'
          }
       ]
+   },
+   {
+      icdCode: '1A07',
+      name: 'Demam tifoid',
+      description:
+         'Infeksi sistemik akibat Salmonella Typhi yang umumnya ditularkan melalui makanan atau air yang terkontaminasi.',
+      variantName: 'Kasus demam berkepanjangan pada remaja',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang laki-laki berusia 19 tahun datang dengan demam yang berlangsung selama delapan hari.'
+         },
+         {
+            type: 'history',
+            content:
+               'Demam meningkat secara bertahap, terutama pada sore dan malam hari, setelah pasien sering membeli makanan dari lingkungan dengan sanitasi kurang baik.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Pasien mengeluhkan sakit kepala, lemah, nafsu makan menurun, nyeri perut, dan sulit buang air besar.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Suhu tubuh 39°C, lidah tampak berlapis putih dengan tepi kemerahan, dan ditemukan bercak kemerahan samar pada abdomen.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Pemeriksaan darah menunjukkan leukopenia ringan dan kultur darah menumbuhkan Salmonella Typhi.'
+         }
+      ]
+   },
+   {
+      icdCode: '1B10.0',
+      name: 'Tuberkulosis paru terkonfirmasi',
+      description:
+         'Infeksi paru akibat Mycobacterium tuberculosis yang telah dikonfirmasi melalui pemeriksaan bakteriologis atau histologis.',
+      variantName: 'Kasus batuk kronis dengan penurunan berat badan',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang laki-laki berusia 32 tahun datang dengan batuk yang tidak membaik selama lebih dari satu bulan.'
+         },
+         {
+            type: 'history',
+            content:
+               'Pasien tinggal serumah dengan anggota keluarga yang pernah menjalani pengobatan infeksi paru menular.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Keluhan disertai keringat malam, demam ringan, penurunan berat badan, berkurangnya nafsu makan, dan sesekali batuk darah.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Pasien tampak kurus dan terdengar suara napas bronkial serta ronki pada lapang paru bagian atas.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Foto toraks menunjukkan kavitas pada lobus atas dan pemeriksaan molekuler sputum mendeteksi Mycobacterium tuberculosis.'
+         }
+      ]
+   },
+   {
+      icdCode: 'CA23',
+      name: 'Asma',
+      description:
+         'Penyakit inflamasi kronis saluran napas dengan gejala dan hambatan aliran udara yang berubah-ubah.',
+      variantName: 'Kasus mengi berulang pada dewasa muda',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang perempuan berusia 21 tahun datang karena beberapa kali mengalami sesak napas sejak masa sekolah.'
+         },
+         {
+            type: 'history',
+            content:
+               'Keluhan sering muncul setelah terpapar debu, udara dingin, bulu hewan, atau setelah berolahraga.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Pasien mengalami batuk pada malam hari, rasa berat di dada, dan bunyi mengi yang hilang timbul.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Saat serangan terdengar mengi ekspirasi bilateral, sedangkan pemeriksaan di antara serangan dapat kembali normal.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Spirometri menunjukkan hambatan aliran udara yang membaik secara bermakna setelah pemberian bronkodilator.'
+         }
+      ]
+   },
+   {
+      icdCode: 'CA22',
+      name: 'Penyakit paru obstruktif kronis',
+      description:
+         'Penyakit paru kronis dengan keterbatasan aliran udara persisten yang biasanya berkaitan dengan pajanan partikel atau gas berbahaya.',
+      variantName: 'Kasus sesak progresif pada perokok',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang laki-laki berusia 64 tahun datang dengan sesak napas yang semakin mengganggu aktivitas sehari-hari.'
+         },
+         {
+            type: 'risk_factor',
+            content:
+               'Pasien merokok sekitar dua bungkus per hari selama lebih dari 35 tahun dan masih aktif merokok.'
+         },
+         {
+            type: 'history',
+            content:
+               'Batuk berdahak telah terjadi hampir setiap hari selama beberapa tahun dan disertai sesak progresif ketika berjalan.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Ditemukan ekspirasi memanjang, suara napas melemah, penggunaan otot bantu napas, dan bentuk dada menyerupai tong.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Spirometri setelah bronkodilator menunjukkan rasio FEV1 terhadap FVC kurang dari 0,70 dan hambatan tidak sepenuhnya reversibel.'
+         }
+      ]
+   },
+   {
+      icdCode: 'DA22.Z',
+      name: 'Penyakit refluks gastroesofageal',
+      description:
+         'Kondisi ketika refluks isi lambung menimbulkan gejala yang mengganggu atau komplikasi pada saluran cerna bagian atas.',
+      variantName: 'Kasus rasa terbakar setelah makan',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang laki-laki berusia 38 tahun dengan berat badan berlebih datang karena rasa tidak nyaman pada dada bagian tengah.'
+         },
+         {
+            type: 'history',
+            content:
+               'Keluhan biasanya muncul setelah makan dalam porsi besar, minum kopi, atau berbaring segera setelah makan.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Pasien merasakan sensasi terbakar dari ulu hati menuju dada dan cairan asam kadang kembali ke mulut.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Pemeriksaan jantung dan paru dalam batas normal serta tidak ditemukan nyeri tekan abdomen yang bermakna.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Pemantauan pH esofagus menunjukkan peningkatan paparan asam yang berkaitan dengan munculnya keluhan pasien.'
+         }
+      ]
+   },
+   {
+      icdCode: 'DB10.02',
+      name: 'Apendisitis akut tanpa peritonitis',
+      description:
+         'Peradangan akut pada apendiks tanpa tanda peritonitis lokal maupun menyeluruh.',
+      variantName: 'Kasus nyeri perut kanan bawah',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang perempuan berusia 22 tahun datang dengan nyeri perut yang semakin berat selama 18 jam.'
+         },
+         {
+            type: 'history',
+            content:
+               'Nyeri awalnya dirasakan di sekitar pusar kemudian berpindah dan menetap pada perut kanan bawah.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Keluhan disertai mual, tidak nafsu makan, dan demam ringan tanpa riwayat diare.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Ditemukan nyeri tekan pada titik McBurney, nyeri lepas ringan, dan nyeri bertambah ketika pasien batuk.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Darah menunjukkan leukositosis neutrofilik dan ultrasonografi memperlihatkan apendiks membesar, tidak dapat dikompresi, tanpa abses atau cairan bebas.'
+         }
+      ]
+   },
+   {
+      icdCode: '3A00',
+      name: 'Anemia defisiensi besi',
+      description:
+         'Anemia yang disebabkan oleh berkurangnya cadangan besi sehingga produksi hemoglobin menjadi tidak memadai.',
+      variantName: 'Kasus kelelahan pada perempuan usia produktif',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang perempuan berusia 29 tahun datang karena mudah lelah dan sulit berkonsentrasi selama beberapa bulan.'
+         },
+         {
+            type: 'history',
+            content:
+               'Pasien mengalami menstruasi yang banyak dan berlangsung tujuh hingga sembilan hari setiap bulan.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Pasien sering pusing ketika berdiri, berdebar saat beraktivitas, dan memiliki kebiasaan mengunyah es batu.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Konjungtiva tampak pucat, kuku tipis berbentuk cekung, dan sudut bibir terlihat pecah-pecah.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Hemoglobin rendah dengan eritrosit mikrositik hipokromik, ferritin serum rendah, dan saturasi transferin menurun.'
+         }
+      ]
+   },
+   {
+      icdCode: '8A80.0',
+      name: 'Migrain tanpa aura',
+      description:
+         'Gangguan sakit kepala berulang dengan serangan nyeri khas tanpa didahului gejala neurologis aura.',
+      variantName: 'Kasus sakit kepala berdenyut berulang',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang perempuan berusia 27 tahun datang karena sakit kepala berulang sejak dua tahun terakhir.'
+         },
+         {
+            type: 'history',
+            content:
+               'Setiap serangan berlangsung antara delapan hingga dua puluh empat jam dan sering dipicu kurang tidur atau terlambat makan.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Nyeri terasa berdenyut pada satu sisi kepala, memburuk ketika beraktivitas, dan disertai mual serta sensitif terhadap cahaya dan suara.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Pemeriksaan neurologis di antara serangan normal dan pasien tidak pernah mengalami gangguan penglihatan atau sensorik sebelum nyeri.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Tidak ditemukan demam, kaku kuduk, defisit neurologis, trauma, atau tanda bahaya lain yang menunjukkan penyebab sakit kepala sekunder.'
+         }
+      ]
+   },
+   {
+      icdCode: '5A02.0',
+      name: 'Tirotoksikosis dengan gondok difus',
+      description:
+         'Keadaan kelebihan hormon tiroid yang disertai pembesaran kelenjar tiroid secara difus, sering berkaitan dengan penyakit Graves.',
+      variantName: 'Kasus penurunan berat badan dengan berdebar',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang perempuan berusia 34 tahun datang karena berat badannya menurun meskipun nafsu makan meningkat.'
+         },
+         {
+            type: 'history',
+            content:
+               'Selama tiga bulan pasien sering merasa panas, sulit tidur, mudah cemas, dan mengalami jantung berdebar.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Pasien juga mengeluhkan tangan gemetar, sering buang air besar, mudah berkeringat, dan kelemahan pada otot paha.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Ditemukan takikardia, tremor halus, pembesaran kelenjar tiroid yang merata, dan kedua bola mata tampak lebih menonjol.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Pemeriksaan menunjukkan TSH sangat rendah, FT4 meningkat, dan antibodi terhadap reseptor TSH memberikan hasil positif.'
+         }
+      ]
+   },
+   {
+      icdCode: 'FA01.0',
+      name: 'Osteoartritis primer lutut',
+      description:
+         'Penyakit degeneratif primer pada sendi lutut yang menyebabkan kerusakan tulang rawan, nyeri, kekakuan, dan keterbatasan gerak.',
+      variantName: 'Kasus nyeri lutut degeneratif',
+      clues: [
+         {
+            type: 'demographic',
+            content:
+               'Seorang perempuan berusia 62 tahun dengan obesitas datang karena nyeri pada kedua lutut.'
+         },
+         {
+            type: 'history',
+            content:
+               'Nyeri berkembang perlahan selama beberapa tahun dan semakin terasa ketika berjalan jauh, menaiki tangga, atau berdiri lama.'
+         },
+         {
+            type: 'symptom',
+            content:
+               'Pasien mengalami kekakuan setelah bangun tidur yang berlangsung kurang dari tiga puluh menit dan membaik setelah bergerak.'
+         },
+         {
+            type: 'physical_exam',
+            content:
+               'Ditemukan krepitasi, pembesaran tulang pada sendi, nyeri saat digerakkan, dan penurunan rentang gerak tanpa kemerahan sistemik.'
+         },
+         {
+            type: 'diagnostic',
+            content:
+               'Foto radiografi menunjukkan penyempitan celah sendi, pembentukan osteofit, dan sklerosis tulang subkondral.'
+         }
+      ]
    }
 ]
 

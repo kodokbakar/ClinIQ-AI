@@ -1,11 +1,24 @@
 'use strict'
+const { clinicalCases } = require('../data/demo-clinical-cases')
 
 const { v4: uuidv4 } = require('uuid')
 
 module.exports = {
   async up(queryInterface) {
     const [diseases] = await queryInterface.sequelize.query(
-      `SELECT id, name FROM diseases LIMIT 10;`
+      `
+    SELECT id, name
+    FROM diseases
+    WHERE icd_code IN (:icdCodes)
+    ORDER BY icd_code ASC
+  `,
+      {
+        replacements: {
+          icdCodes: clinicalCases.map(
+            (clinicalCase) => clinicalCase.icdCode
+          )
+        }
+      }
     )
     if (!diseases.length) return
 
