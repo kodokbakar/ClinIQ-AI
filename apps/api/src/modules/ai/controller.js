@@ -3,40 +3,11 @@ const { getCache, setCacheWithTTL } = require('../../utils/redis')
 const { getAIClient } = require('../../config/ai')
 const { HttpStatusCode } = require('axios')
 const uuid = require('uuid')
+const {
+   safeParseJSON
+} = require('../../utils/safe-json')
 
 const CACHE_TTL_SECONDS = 86400
-
-function safeParseJSON(raw) {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/```\s*$/i, '')
-    .trim()
-  const match = cleaned.match(/\{[\s\S]*\}/)
-  const text = match ? match[0] : cleaned
-
-  // try direct parse
-  try { return JSON.parse(text) } catch {}
-
-  // try repair: close unterminated strings at end
-  const repaired = text
-    .replace(/(?<=[^\\])"(?=\s*[,\]\}]\s*$)/, '"') // ensure last string closed
-  try { return JSON.parse(repaired) } catch {}
-
-  // try repair: if missing closing } count open vs close
-  const opens = (text.match(/\{/g) || []).length
-  const closes = (text.match(/\}/g) || []).length
-  if (opens > closes) {
-    try { return JSON.parse(text + '}'.repeat(opens - closes)) } catch {}
-  }
-
-  // try repair: close unterminated strings by counting quotes
-  let fixed = text
-  //   if last char is not " but line ends with a value, close the string
-  fixed = fixed.replace(/:\s*"([^"]*)$/, ':\n"$1"')
-  try { return JSON.parse(fixed) } catch {}
-
-  throw new Error('Failed to parse AI response as JSON')
-}
 
 class Controller {
    /** GET /v1/ai/explanation/:disease_id?locale=id */
@@ -131,7 +102,7 @@ Format your response as JSON:
                model: process.env.AI_MODEL || process.env.AI_COMBOS,
                messages: [
                   { role: 'system', content: 'You are a JSON generator. Return ONLY valid JSON, no markdown, no prose.' },
-                  { role: 'user', content: prompt },
+                  { role: 'user', content: prompt }
                ],
                temperature: 0.2,
                max_tokens: 1500

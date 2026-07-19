@@ -1,18 +1,21 @@
-"use strict";
+'use strict'
 
-const db = require('../../db/models');
-const { getAIClient } = require('../config/ai');
+const db = require('../../db/models')
+const { getAIClient } = require('../config/ai')
+const {
+   safeParseJSON
+} = require('./safe-json')
 
 function buildPrompt(disease, difficulty, locale) {
-  const difficultyPrompts = {
-    easy: 'Create a straightforward clinical case with classic presentation.',
-    medium: 'Create a moderately challenging case with some atypical features.',
-    hard: 'Create a complex case with unusual presentation or comorbidities.',
-  };
-  const lang =
-    locale === 'id' ? 'Indonesian (Bahasa Indonesia)' : 'English';
+   const difficultyPrompts = {
+      easy: 'Create a straightforward clinical case with classic presentation.',
+      medium: 'Create a moderately challenging case with some atypical features.',
+      hard: 'Create a complex case with unusual presentation or comorbidities.'
+   }
+   const lang =
+    locale === 'id' ? 'Indonesian (Bahasa Indonesia)' : 'English'
 
-  return `You are generating a clinical vignette for medical students about "${disease.name}" (ICD-11: ${disease.icd_code}).
+   return `You are generating a clinical vignette for medical students about "${disease.name}" (ICD-11: ${disease.icd_code}).
 
 Difficulty: ${difficulty}. ${difficultyPrompts[difficulty]}
 Language: ${lang}.
@@ -38,101 +41,65 @@ JSON shape (strict):
   "correctDiagnosis": "...",
   "clues": ["Clue 1...", "Clue 2...", "Clue 3...", "Clue 4...", "Clue 5..."],
   "distractors": ["Similar condition 1", "Similar condition 2", "Similar condition 3"]
-}`;
-}
-
-function tryParseJSON(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-function safeParseJSON(raw) {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/```\s*$/i, '')
-    .trim();
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  const text = match ? match[0] : cleaned;
-
-  // direct parse
-  const direct = tryParseJSON(text);
-  if (direct && typeof direct === 'object') return direct;
-
-  // repair: close unclosed strings
-  const repaired = text.replace(/:\s*"([^"]*)$/, ':\n"$1"');
-  const r1 = tryParseJSON(repaired);
-  if (r1 && typeof r1 === 'object') return r1;
-
-  // repair: add missing closing braces
-  const opens = (text.match(/\{/g) || []).length;
-  const closes = (text.match(/\}/g) || []).length;
-  if (opens > closes) {
-    const r2 = tryParseJSON(text + '}'.repeat(opens - closes));
-    if (r2 && typeof r2 === 'object') return r2;
-  }
-
-  return null;
+}`
 }
 
 function parseVignette(content) {
-  const parsed = safeParseJSON(content);
-  if (parsed) return parsed;
+   const parsed = safeParseJSON(content)
+   if (parsed) return parsed
 
-  console.warn('Failed to parse AI response as JSON, using raw content');
-  const cleaned = content
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/```\s*$/i, '')
-    .trim();
-  return {
-    caseText: cleaned,
-    correctDiagnosis: '',
-    clues: [],
-    distractors: [],
-  };
+   console.warn('Failed to parse AI response as JSON, using raw content')
+   const cleaned = content
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim()
+   return {
+      caseText: cleaned,
+      correctDiagnosis: '',
+      clues: [],
+      distractors: []
+   }
 }
 
 function deriveCluesFromCase(caseText) {
-  if (!caseText) return [];
-  const sentences = caseText
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 20 && s.length < 220);
-  return sentences;
+   if (!caseText) return []
+   const sentences = caseText
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 20 && s.length < 220)
+   return sentences
 }
 
 function normalizeClues(parsed, disease) {
-  const diseaseName = (disease.name || '').toLowerCase();
+   const diseaseName = (disease.name || '').toLowerCase()
 
-  // Primary: derive progressive one-sentence clues from caseText, in story order.
-  const fromCase = deriveCluesFromCase(parsed.caseText).filter(
-    (s) => !s.toLowerCase().includes(diseaseName)
-  );
+   // Primary: derive progressive one-sentence clues from caseText, in story order.
+   const fromCase = deriveCluesFromCase(parsed.caseText).filter(
+      (s) => !s.toLowerCase().includes(diseaseName)
+   )
 
-  if (fromCase.length >= 5) {
-    return fromCase.slice(0, 5);
-  }
+   if (fromCase.length >= 5) {
+      return fromCase.slice(0, 5)
+   }
 
-  // Fallback: use AI-provided clues array if caseText too short.
-  const base = Array.isArray(parsed.clues)
-    ? parsed.clues.map((c) => (typeof c === 'string' ? c.trim() : '')).filter(Boolean)
-    : [];
+   // Fallback: use AI-provided clues array if caseText too short.
+   const base = Array.isArray(parsed.clues)
+      ? parsed.clues.map((c) => (typeof c === 'string' ? c.trim() : '')).filter(Boolean)
+      : []
 
-  const merged = [...fromCase, ...base].filter(
-    (value, index, self) => self.indexOf(value) === index
-  );
+   const merged = [...fromCase, ...base].filter(
+      (value, index, self) => self.indexOf(value) === index
+   )
 
-  // If still fewer than 5, pad from any remaining case sentences.
-  if (merged.length < 5) {
-    const extra = deriveCluesFromCase(parsed.caseText).filter(
-      (s) => !merged.includes(s) && !s.toLowerCase().includes(diseaseName)
-    );
-    merged.push(...extra);
-  }
+   // If still fewer than 5, pad from any remaining case sentences.
+   if (merged.length < 5) {
+      const extra = deriveCluesFromCase(parsed.caseText).filter(
+         (s) => !merged.includes(s) && !s.toLowerCase().includes(diseaseName)
+      )
+      merged.push(...extra)
+   }
 
-  return merged.slice(0, 5);
+   return merged.slice(0, 5)
 }
 
 /**
@@ -140,45 +107,45 @@ function normalizeClues(parsed, disease) {
  * Returns the created QuizVignette instance.
  */
 async function generateForDisease(disease, locale = 'id', difficulty = 'medium') {
-  const aiClient = getAIClient();
+   const aiClient = getAIClient()
 
-  const prompt = buildPrompt(disease, difficulty, locale);
-  const completion = await aiClient.chat.completions.create({
-    model: process.env.AI_COMBOS,
-    messages: [
-      {
-        role: 'system',
-        content:
-          'You are a medical education expert creating clinical vignettes for medical students.',
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.7,
-    max_tokens: 1500,
-  });
+   const prompt = buildPrompt(disease, difficulty, locale)
+   const completion = await aiClient.chat.completions.create({
+      model: process.env.AI_COMBOS,
+      messages: [
+         {
+            role: 'system',
+            content:
+          'You are a medical education expert creating clinical vignettes for medical students.'
+         },
+         { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500
+   })
 
-  const content = completion.choices[0].message.content;
-  const parsed = parseVignette(content);
-  const clueTexts = normalizeClues(parsed, disease);
+   const content = completion.choices[0].message.content
+   const parsed = parseVignette(content)
+   const clueTexts = normalizeClues(parsed, disease)
 
-  const variantName = `auto-${Date.now()}-${disease.id}`;
-  console.log('[generateForDisease] variantName:', variantName, 'disease.id:', disease.id);
+   const variantName = `auto-${Date.now()}-${disease.id}`
+   console.log('[generateForDisease] variantName:', variantName, 'disease.id:', disease.id)
 
-  const vignette = await db.QuizVignette.create({
-    disease_id: disease.id,
-    variant_name: variantName,
-  });
+   const vignette = await db.QuizVignette.create({
+      disease_id: disease.id,
+      variant_name: variantName
+   })
 
-  await db.Clue.bulkCreate(
-    clueTexts.map((text, i) => ({
-      vignette_id: vignette.id,
-      clue_number: i + 1,
-      content: text,
-      type: i === 0 ? 'history' : 'clinical',
-    }))
-  );
+   await db.Clue.bulkCreate(
+      clueTexts.map((text, i) => ({
+         vignette_id: vignette.id,
+         clue_number: i + 1,
+         content: text,
+         type: i === 0 ? 'history' : 'clinical'
+      }))
+   )
 
-  return vignette;
+   return vignette
 }
 
-module.exports = { buildPrompt, parseVignette, normalizeClues, generateForDisease };
+module.exports = { buildPrompt, parseVignette, normalizeClues, generateForDisease }
