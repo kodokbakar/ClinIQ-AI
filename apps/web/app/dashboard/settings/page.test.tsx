@@ -134,7 +134,7 @@ describe("Settings page", () => {
       },
     });
 
-    fireEvent.change(screen.getByLabelText("Konfirmasi password baru"), {
+    fireEvent.change(screen.getByLabelText("Konfirmasi password"), {
       target: {
         value: "NewPassword123",
       },
@@ -142,7 +142,7 @@ describe("Settings page", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Simpan perubahan",
+        name: "Simpan password",
       }),
     );
 
@@ -195,7 +195,7 @@ describe("Settings page", () => {
       },
     });
 
-    fireEvent.change(screen.getByLabelText("Konfirmasi password baru"), {
+    fireEvent.change(screen.getByLabelText("Konfirmasi password"), {
       target: {
         value: "weakpass",
       },
@@ -203,7 +203,7 @@ describe("Settings page", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Simpan perubahan",
+        name: "Simpan password",
       }),
     );
 
