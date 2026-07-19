@@ -10,6 +10,7 @@ const {
    groupLeaderboardCacheKey,
    invalidateLeaderboardCaches
 } = require('../../utils/leaderboard-cache')
+const uuid = require('uuid')
 
 const CACHE_TTL_SECONDS = 86400
 const EMPTY_QUIZ_MESSAGE = 'No more vignettes available. All completed!'
@@ -20,7 +21,7 @@ function todayDate() {
 }
 
 function isCompleted(attempt) {
-   return attempt.is_correct === true
+   return attempt.is_correct !== null
 }
 
 function revealedClueCount(value) {
@@ -496,6 +497,161 @@ class Controller {
       }
    }
 
+   static async attemptDetail(req, res) {
+      try {
+         const userId = req.user.id
+         const { attempt_id: attemptId } = req.params
+
+         if (!uuid.validate(attemptId)) {
+            return res.status(HttpStatusCode.BadRequest).json({
+               success: false,
+               message: 'Invalid attempt ID'
+            })
+         }
+
+         const attempt = await db.QuizAttempt.findOne({
+            where: {
+               id: attemptId,
+               user_id: userId
+            },
+            include: [
+               {
+                  model: db.QuizVignette,
+                  as: 'vignette',
+                  attributes: [
+                     'id',
+                     'variant_name',
+                     'disease_id'
+                  ],
+                  include: [
+                     {
+                        model: db.Disease,
+                        as: 'disease',
+                        attributes: [
+                           'id',
+                           'name',
+                           'icd_code',
+                           'description'
+                        ]
+                     },
+                     {
+                        model: db.Clue,
+                        as: 'clues',
+                        attributes: [
+                           'clue_number',
+                           'content',
+                           'type'
+                        ]
+                     }
+                  ]
+               }
+            ]
+         })
+
+         if (!attempt) {
+            return res
+               .status(HttpStatusCode.NotFound)
+               .json({
+                  success: false,
+                  message: 'Attempt not found'
+               })
+         }
+
+         if (!isCompleted(attempt)) {
+            return res
+               .status(HttpStatusCode.Conflict)
+               .json({
+                  success: false,
+                  message: 'Attempt is not completed'
+               })
+         }
+
+         const disease = attempt.vignette?.disease
+
+         if (!disease) {
+            return res
+               .status(HttpStatusCode.NotFound)
+               .json({
+                  success: false,
+                  message: 'Disease not found'
+               })
+         }
+
+         const explanation =
+            await db.AIExplanation.findOne({
+               where: {
+                  disease_id: disease.id,
+                  locale: 'id'
+               },
+               attributes: [
+                  'disease_id',
+                  'locale',
+                  'overview',
+                  'pathophysiology',
+                  'clinical_features',
+                  'diagnosis',
+                  'management',
+                  'prevention',
+                  'key_points'
+               ]
+            })
+
+         const clues = [
+            ...(attempt.vignette.clues || [])
+         ]
+            .sort(
+               (first, second) =>
+                  first.clue_number -
+                  second.clue_number
+            )
+            .map(cluePayload)
+
+         return res
+            .status(HttpStatusCode.Ok)
+            .json({
+               success: true,
+               data: {
+                  id: attempt.id,
+                  vignette_id: attempt.vignette_id,
+                  variant_name:
+                     attempt.vignette.variant_name,
+                  clues_revealed:
+                     attempt.clues_revealed,
+                  is_correct: attempt.is_correct,
+                  score: attempt.score,
+                  attempt_date:
+                     attempt.attempt_date,
+                  submitted_diagnosis:
+                     attempt.submitted_diagnosis,
+                  disease: {
+                     id: disease.id,
+                     name: disease.name,
+                     icd_code: disease.icd_code,
+                     description:
+                        disease.description
+                  },
+                  clues,
+                  explanation
+               }
+            })
+      } catch (err) {
+         console.error(
+            'Attempt detail failed:',
+            err.message
+         )
+
+         const code =
+            typeof err.code === 'number'
+               ? err.code
+               : HttpStatusCode.InternalServerError
+
+         return res.status(code).json({
+            success: false,
+            message: 'Failed to get attempt detail'
+         })
+      }
+   }
+
    static async myAttempts(req, res) {
       try {
          const userId = req.user.id
@@ -561,17 +717,26 @@ class Controller {
                correct_attempts: correctAttempts,
                total_score: Number(totalScore) || 0
             },
-            data: rows.map((attempt) => ({
-               id: attempt.id,
-               vignette_id: attempt.vignette_id,
-               disease_name: attempt.vignette?.disease?.name,
-               disease_icd: attempt.vignette?.disease?.icd_code,
-               clues_revealed: attempt.clues_revealed,
-               is_correct: attempt.is_correct,
-               score: attempt.score,
-               attempt_date: attempt.attempt_date,
-               submitted_diagnosis: attempt.submitted_diagnosis
-            }))
+            data: rows.map((attempt) => {
+               const completed = isCompleted(attempt)
+
+               return {
+                  id: attempt.id,
+                  vignette_id: attempt.vignette_id,
+                  disease_name: completed
+                     ? attempt.vignette?.disease?.name
+                     : null,
+                  disease_icd: completed
+                     ? attempt.vignette?.disease?.icd_code
+                     : null,
+                  clues_revealed: attempt.clues_revealed,
+                  is_correct: attempt.is_correct,
+                  score: attempt.score,
+                  attempt_date: attempt.attempt_date,
+                  submitted_diagnosis:
+                     attempt.submitted_diagnosis
+               }
+            })
          })
       } catch (err) {
          console.log(err)

@@ -176,6 +176,16 @@ router.post('/submit-diagnosis', authentication, Controller.submitDiagnosis)
  *       401:
  *         description: Authentication required
  */
-router.get('/attempts/me', authentication, Controller.myAttempts)
+router.get(
+   '/attempts/me',
+   authentication,
+   Controller.myAttempts
+)
+
+router.get(
+   '/attempts/:attempt_id',
+   authentication,
+   Controller.attemptDetail
+)
 
 module.exports = router
