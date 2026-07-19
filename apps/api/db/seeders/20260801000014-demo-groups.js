@@ -1,29 +1,89 @@
 'use strict'
 
+const { Op } = require('sequelize')
 const { v4: uuidv4 } = require('uuid')
+const {
+  demoGroups
+} = require('../data/demo-presentation-data')
 
+function daysAgo(days) {
+  const date = new Date()
+
+  date.setUTCHours(9, 0, 0, 0)
+  date.setUTCDate(date.getUTCDate() - days)
+
+  return date
+}
+
+/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface) {
-    const [users] = await queryInterface.sequelize.query(
-      `SELECT id, name FROM users LIMIT 3;`
-    )
-    if (!users.length) return
+    const ownerEmails = demoGroups.map((group) => group.ownerEmail)
 
-    const groups = users.map((u, i) => ({
+    const [owners] = await queryInterface.sequelize.query(
+      `
+            SELECT id, email
+            FROM users
+            WHERE email IN (:emails)
+         `,
+      {
+        replacements: {
+          emails: ownerEmails
+        }
+      }
+    )
+
+    const ownersByEmail = new Map(
+      owners.map((owner) => [owner.email, owner])
+    )
+
+    const missingOwners = ownerEmails.filter(
+      (email) => !ownersByEmail.has(email)
+    )
+
+    if (missingOwners.length > 0) {
+      throw new Error(
+        `Cannot seed demo groups. Missing owners: ${missingOwners.join(', ')}`
+      )
+    }
+
+    const inviteCodes = demoGroups.map((group) => group.inviteCode)
+
+    await queryInterface.bulkDelete(
+      'groups',
+      {
+        invite_code: {
+          [Op.in]: inviteCodes
+        }
+      },
+      {}
+    )
+
+    const createdAt = daysAgo(60)
+
+    const groups = demoGroups.map((group) => ({
       id: uuidv4(),
-      name: `Kelompok Belajar ${String.fromCharCode(65 + i)}`,
-      description: 'Kelompok belajar untuk latihan quiz.',
-      invite_code: `INVITE${String.fromCharCode(65 + i)}${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
-      owner_id: u.id,
-      member_count: 1,
-      created_at: new Date(),
-      updated_at: new Date()
+      name: group.name,
+      description: group.description,
+      invite_code: group.inviteCode,
+      owner_id: ownersByEmail.get(group.ownerEmail).id,
+      member_count: group.memberEmails.length,
+      created_at: createdAt,
+      updated_at: createdAt
     }))
 
     await queryInterface.bulkInsert('groups', groups, {})
   },
 
   async down(queryInterface) {
-    await queryInterface.bulkDelete('groups', null, {})
+    await queryInterface.bulkDelete(
+      'groups',
+      {
+        invite_code: {
+          [Op.in]: demoGroups.map((group) => group.inviteCode)
+        }
+      },
+      {}
+    )
   }
 }

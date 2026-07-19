@@ -59,34 +59,34 @@ async function loginCookie(email) {
    return tokenCookie.split(';')[0]
 }
 
-async function createDiseaseQuizAttemptForOtherUser() {
-   const disease = await db.Disease.create({
-      icd_code: 'T-SEC-001',
-      name: 'Security Test Disease',
-      description: 'Security test disease'
-   })
+// async function createDiseaseQuizAttemptForOtherUser() {
+//    const disease = await db.Disease.create({
+//       icd_code: 'T-SEC-001',
+//       name: 'Security Test Disease',
+//       description: 'Security test disease'
+//    })
 
-   const vignette = await db.QuizVignette.create({
-      disease_id: disease.id,
-      variant_name: 'security-vignette'
-   })
+//    const vignette = await db.QuizVignette.create({
+//       disease_id: disease.id,
+//       variant_name: 'security-vignette'
+//    })
 
-   await db.Clue.create({
-      vignette_id: vignette.id,
-      clue_number: 1,
-      content: 'Security clue 1',
-      type: 'history'
-   })
+//    await db.Clue.create({
+//       vignette_id: vignette.id,
+//       clue_number: 1,
+//       content: 'Security clue 1',
+//       type: 'history'
+//    })
 
-   const attempt = await db.QuizAttempt.create({
-      user_id: users.other.id,
-      vignette_id: vignette.id,
-      clues_revealed: 1,
-      attempt_date: new Date().toISOString().slice(0, 10)
-   })
+//    const attempt = await db.QuizAttempt.create({
+//       user_id: users.other.id,
+//       vignette_id: vignette.id,
+//       clues_revealed: 1,
+//       attempt_date: new Date().toISOString().slice(0, 10)
+//    })
 
-   return attempt
-}
+//    return attempt
+// }
 
 async function cleanupSecurityData() {
    const testUsers = await db.user.findAll({

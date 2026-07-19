@@ -1,70 +1,76 @@
 'use strict'
 
-const { hashPassword } = require('../../src/utils/bcrypt')
+const { Op } = require('sequelize')
 const { v4: uuidv4 } = require('uuid')
+const { hashPassword } = require('../../src/utils/bcrypt')
+const {
+  DEMO_PASSWORD,
+  demoUserEmails,
+  demoUsers
+} = require('../data/demo-presentation-data')
 
+function daysAgo(days) {
+  const date = new Date()
+
+  date.setUTCDate(date.getUTCDate() - days)
+
+  return date
+}
+
+/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface) {
-    const now = new Date()
-    const passwordHash = hashPassword('password123')
-
     const [roles] = await queryInterface.sequelize.query(
-      `SELECT id, name FROM roles;`
+      `
+            SELECT id, name
+            FROM roles
+            WHERE name IN ('Superadmin', 'Admin', 'User')
+         `
     )
-    const superAdminRole = roles.find((r) => r.name === 'Superadmin')
-    const adminRole = roles.find((r) => r.name === 'Admin')
-    const User = roles.find((r) => r.name === 'User')
 
-    await queryInterface.bulkInsert(
-      'users',
-      [
-        {
-          id: uuidv4(),
-          name: 'Super Admin',
-          email: 'suadm@gmail.com',
-          password: passwordHash,
-          role_id: superAdminRole?.id,
-          status: true,
-          avatar: null,
-          last_updated_password: now,
-          created_at: now,
-          updated_at: now,
-          deleted_at: null
-        },
-        {
-          id: uuidv4(),
-          name: 'Admin',
-          email: 'admin@gmail.com',
-          password: passwordHash,
-          role_id: adminRole?.id,
-          status: true,
-          avatar: null,
-          last_updated_password: now,
-          created_at: now,
-          updated_at: now,
-          deleted_at: null
-        },
-        {
-          id: uuidv4(),
-          name: 'User',
-          email: 'user@gmail.com',
-          password: passwordHash,
-          role_id: User?.id,
-          status: true,
-          avatar: null,
-          last_updated_password: now,
-          created_at: now,
-          updated_at: now,
-          deleted_at: null
-        }
-      ],
-      { ignoreDuplicates: true }
+    const roleIds = new Map(roles.map((role) => [role.name, role.id]))
+    const missingRoles = ['Superadmin', 'Admin', 'User'].filter(
+      (roleName) => !roleIds.has(roleName)
     )
+
+    if (missingRoles.length > 0) {
+      throw new Error(
+        `Cannot seed demo users. Missing roles: ${missingRoles.join(', ')}`
+      )
+    }
+
+    const now = new Date()
+    const passwordHash = hashPassword(DEMO_PASSWORD)
+
+    const users = demoUsers.map((user, index) => ({
+      id: uuidv4(),
+      name: user.name,
+      email: user.email,
+      password: passwordHash,
+      role_id: roleIds.get(user.roleName),
+      status: true,
+      avatar: null,
+      last_updated_password: now,
+      last_activity: daysAgo(index % 7),
+      created_at: daysAgo(90 - index),
+      updated_at: now,
+      deleted_at: null
+    }))
+
+    await queryInterface.bulkInsert('users', users, {
+      ignoreDuplicates: true
+    })
   },
 
   async down(queryInterface) {
-    await queryInterface.bulkDelete('users', {
-      email: ['suadm@gmail.com', 'admin@gmail.com', 'user@gmail.com']
-    })
+    await queryInterface.bulkDelete(
+      'users',
+      {
+        email: {
+          [Op.in]: demoUserEmails
+        }
+      },
+      {}
+    )
   }
 }
