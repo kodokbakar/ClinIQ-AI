@@ -71,7 +71,7 @@ router.post('/logout', authentication, Controller.logoutUser)
  * /v1/auth/change-password:
  *   put:
  *     tags: [Auth]
- *     summary: Change password
+ *     summary: Change the authenticated user's password
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
  *       required: true
@@ -79,13 +79,31 @@ router.post('/logout', authentication, Controller.logoutUser)
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - old_password
+ *               - new_password
+ *               - confirm_password
  *             properties:
- *               oldPassword: { type: string }
- *               newPassword: { type: string }
+ *               old_password:
+ *                 type: string
+ *                 format: password
+ *               new_password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *               confirm_password:
+ *                 type: string
+ *                 format: password
  *     responses:
  *       200: { description: Password changed }
+ *       400: { description: Invalid password input }
+ *       401: { description: Authentication required }
  */
-router.put('/change-password', authentication, Controller.changePassword)
+router.put(
+   '/change-password',
+   authentication,
+   Controller.changePassword
+)
 
 /**
  * @swagger

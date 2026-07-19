@@ -8,6 +8,7 @@ export type ApiResult<T> = {
 export type AuthRole = {
   id: string;
   name: string;
+  is_superadmin?: boolean;
 };
 
 export type AuthUser = {
@@ -22,6 +23,18 @@ export type AuthUser = {
   last_activity?: string | null;
   role?: AuthRole | null;
 };
+
+export function canAccessAdmin(
+  user: Pick<AuthUser, "is_superadmin" | "role">,
+): boolean {
+  const roleName = user.role?.name.trim().toLowerCase();
+
+  return (
+    user.is_superadmin === true ||
+    user.role?.is_superadmin === true ||
+    roleName === "admin"
+  );
+}
 
 export type LoginPayload = {
   email: string;
@@ -60,9 +73,10 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
 async function requestJson<T>(
   path: string,
   payload: Record<string, unknown>,
+  method: "POST" | "PUT" = "POST",
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
+    method,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -81,6 +95,11 @@ export function loginUser(payload: LoginPayload): Promise<AuthUser> {
 export type ChangePasswordPayload = {
   oldPassword: string;
   newPassword: string;
+  confirmPassword: string;
+};
+
+export type ChangePasswordResult = {
+  changed_at: string;
 };
 
 export function registerUser(payload: RegisterPayload): Promise<AuthUser> {
@@ -93,8 +112,16 @@ export function logoutUser(): Promise<boolean> {
 
 export function changePassword(
   payload: ChangePasswordPayload,
-): Promise<boolean> {
-  return requestJson<boolean>("/api/v1/auth/change-password", payload);
+): Promise<ChangePasswordResult> {
+  return requestJson<ChangePasswordResult>(
+    "/api/v1/auth/change-password",
+    {
+      old_password: payload.oldPassword,
+      new_password: payload.newPassword,
+      confirm_password: payload.confirmPassword,
+    },
+    "PUT",
+  );
 }
 
 export async function getCurrentUser(cookieHeader?: string): Promise<AuthUser> {

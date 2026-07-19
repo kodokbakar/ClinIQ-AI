@@ -61,9 +61,9 @@ class Controller {
             .json(api.results(result, HttpStatusCode.Created, { req }))
       } catch (err) {
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
@@ -130,9 +130,9 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
@@ -151,23 +151,36 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
 
    static async changePassword(req, res) {
       try {
-         const user = req.user
-         const data = validateRequest(ChangePasswordSchema, req)
+         const data = validateRequest(
+            ChangePasswordSchema,
+            req
+         )
 
-         const currentUser = await db.user.findByPk(user.id)
+         const currentUser = await db.user.findByPk(
+            req.user.id
+         )
+
+         if (!currentUser) {
+            throw {
+               code: HttpStatusCode.Unauthorized,
+               message: 'User session is no longer valid'
+            }
+         }
+
          const isValidOldPassword = bcrypt.compare(
             data.old_password,
             currentUser.password
          )
+
          if (!isValidOldPassword) {
             throw {
                code: HttpStatusCode.BadRequest,
@@ -175,32 +188,52 @@ class Controller {
             }
          }
 
-         const isValidNewPassword = bcrypt.compare(
+         const isSamePassword = bcrypt.compare(
             data.new_password,
             currentUser.password
          )
-         if (isValidNewPassword) {
+
+         if (isSamePassword) {
             throw {
                code: HttpStatusCode.BadRequest,
-               message: 'New password must be different from old password'
+               message:
+                  'New password must be different from old password'
             }
          }
 
-         const newPasswordHash = bcrypt.hashPassword(data.new_password)
+         const changedAt = new Date()
+         const newPasswordHash = bcrypt.hashPassword(
+            data.new_password
+         )
+
          await currentUser.update({
-            password: newPasswordHash
+            password: newPasswordHash,
+            last_updated_password: changedAt
          })
 
-         res
+         return res
             .status(HttpStatusCode.Ok)
-            .json(api.results(true, HttpStatusCode.Ok, { req }))
+            .json(
+               api.results(
+                  {
+                     changed_at: changedAt.toISOString()
+                  },
+                  HttpStatusCode.Ok,
+                  { req }
+               )
+            )
       } catch (err) {
          console.log(err)
+
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
-         res.status(err.code).json(api.results(null, err.code, { err }))
+            typeof err.code !== 'undefined' &&
+               err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
+
+         return res
+            .status(err.code)
+            .json(api.results(null, err.code, { err }))
       }
    }
 
@@ -257,9 +290,9 @@ class Controller {
       } catch (err) {
          console.log(err)
          err.code =
-        typeof err.code !== 'undefined' && err.code !== null
-           ? err.code
-           : HttpStatusCode.InternalServerError
+            typeof err.code !== 'undefined' && err.code !== null
+               ? err.code
+               : HttpStatusCode.InternalServerError
          res.status(err.code).json(api.results(null, err.code, { err }))
       }
    }
