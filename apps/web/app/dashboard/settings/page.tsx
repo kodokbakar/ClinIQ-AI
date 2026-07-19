@@ -24,14 +24,50 @@ function getRoleName(user: AuthUser): string {
   return user.role?.name ?? (user.is_superadmin ? "Superadmin" : "User");
 }
 
+function validatePasswordChange(
+  oldPassword: string,
+  newPassword: string,
+  confirmPassword: string,
+): string {
+  if (!oldPassword) {
+    return "Password lama tidak boleh kosong.";
+  }
+
+  if (!newPassword) {
+    return "Password baru tidak boleh kosong.";
+  }
+
+  if (newPassword.length < 8) {
+    return "Password baru minimal 8 karakter.";
+  }
+
+  if (!STRONG_PASSWORD_PATTERN.test(newPassword)) {
+    return "Password baru harus mengandung huruf kecil, huruf besar, dan angka.";
+  }
+
+  if (newPassword === oldPassword) {
+    return "Password baru harus berbeda dari password lama.";
+  }
+
+  if (!confirmPassword) {
+    return "Konfirmasi password tidak boleh kosong.";
+  }
+
+  if (newPassword !== confirmPassword) {
+    return "Password baru dan konfirmasi password tidak cocok.";
+  }
+
+  return "";
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
@@ -54,57 +90,20 @@ export default function SettingsPage() {
     };
   }, [router]);
 
-  if (isLoading) {
-    return (
-      <section className="diagnostic-panel diagnostic-loading">
-        <p className="diagnostic-eyebrow">Memuat pengaturan</p>
-        <h1>Mengambil profil...</h1>
-      </section>
-    );
-  }
-
-  if (!user) return null;
-
   async function handleChangePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setPasswordError("");
     setPasswordSuccess("");
 
-    if (!oldPassword) {
-      setPasswordError("Password lama tidak boleh kosong.");
-      return;
-    }
+    const validationError = validatePasswordChange(
+      oldPassword,
+      newPassword,
+      confirmPassword,
+    );
 
-    if (!newPassword) {
-      setPasswordError("Password baru tidak boleh kosong.");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setPasswordError("Password baru minimal 8 karakter.");
-      return;
-    }
-
-    if (!STRONG_PASSWORD_PATTERN.test(newPassword)) {
-      setPasswordError(
-        "Password baru harus mengandung huruf kecil, huruf besar, dan angka.",
-      );
-      return;
-    }
-
-    if (newPassword === oldPassword) {
-      setPasswordError("Password baru harus berbeda dari password lama.");
-      return;
-    }
-
-    if (!confirmPassword) {
-      setPasswordError("Konfirmasi password tidak boleh kosong.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Password baru dan konfirmasi password tidak cocok.");
+    if (validationError) {
+      setPasswordError(validationError);
       return;
     }
 
@@ -126,10 +125,10 @@ export default function SettingsPage() {
           : current,
       );
 
-      setPasswordSuccess("Password berhasil diubah.");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setPasswordSuccess("Password berhasil diubah.");
     } catch (error) {
       setPasswordError(
         error instanceof Error ? error.message : "Gagal mengubah password.",
@@ -139,122 +138,139 @@ export default function SettingsPage() {
     }
   }
 
-  const roleName = getRoleName(user);
+  if (isLoading) {
+    return (
+      <section className="diagnostic-panel diagnostic-loading">
+        <p className="diagnostic-eyebrow">Memuat pengaturan</p>
+        <h1>Mengambil profil...</h1>
+      </section>
+    );
+  }
+
+  if (!user) return null;
+
+  const accountRecords = [
+    ["Nama", user.name],
+    ["Email", user.email],
+    ["Role", getRoleName(user)],
+    ["Status", user.status === false ? "Tidak aktif" : "Aktif"],
+    ["User ID", user.id],
+    ["Password diperbarui", formatDate(user.last_updated_password)],
+  ];
 
   return (
-    <section className="dashboard-grid">
-      <div className="diagnostic-hero diagnostic-hero--compact">
+    <section className="settings-page">
+      <header className="settings-header">
         <div>
-          <p className="diagnostic-eyebrow">account record</p>
+          <p className="diagnostic-eyebrow">account settings</p>
           <h1>Profil belajar dan sesi.</h1>
-          <p>
-            Data ini dibaca dari sesi backend. Untuk sekarang dashboard hanya
-            menampilkan profil; edit profil bisa ditambahkan setelah endpoint
-            update tersedia.
-          </p>
+          <p>Kelola informasi akun dan keamanan password.</p>
         </div>
-      </div>
+      </header>
 
-      <section className="diagnostic-panel">
-        <div className="diagnostic-section-head">
-          <div>
-            <p className="diagnostic-eyebrow">identity</p>
-            <h2>Informasi akun.</h2>
-          </div>
-        </div>
-
-        <dl className="settings-record-grid">
-          {[
-            ["Nama", user.name],
-            ["Email", user.email],
-            ["Role", roleName],
-            ["Status", user.status === false ? "Tidak aktif" : "Aktif"],
-            ["User ID", user.id],
-            ["Password diperbarui", formatDate(user.last_updated_password)],
-          ].map(([label, value]) => (
-            <div key={label} className="settings-record">
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="diagnostic-panel">
-        <div className="diagnostic-section-head">
-          <div>
-            <p className="diagnostic-eyebrow">security</p>
-            <h2>Ubah password.</h2>
-          </div>
-        </div>
-
-        <form
-          onSubmit={handleChangePassword}
-          className="settings-form grid gap-4"
-          noValidate
+      <div className="settings-layout">
+        <section
+          className="settings-card settings-card--account"
+          aria-labelledby="account-information-title"
         >
-          {passwordSuccess ? (
-            <p role="status" className="settings-form__success">
-              {passwordSuccess}
-            </p>
-          ) : null}
-          {passwordError ? (
-            <p role="alert" className="settings-form__error">
-              {passwordError}
-            </p>
-          ) : null}
+          <header className="settings-card__header">
+            <div>
+              <span className="settings-card__label">identity</span>
+              <h2 id="account-information-title">Informasi akun.</h2>
+            </div>
+          </header>
 
-          <div className="grid gap-2">
-            <label htmlFor="old-password">Password lama</label>
-            <input
-              id="old-password"
-              name="oldPassword"
-              type="password"
-              value={oldPassword}
-              onChange={(event) => setOldPassword(event.target.value)}
-              autoComplete="current-password"
-              placeholder="Masukkan password saat ini"
-              disabled={isChangingPassword}
-            />
-          </div>
+          <dl className="settings-record-grid">
+            {accountRecords.map(([label, value]) => (
+              <div key={label} className="settings-record">
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
 
-          <div className="grid gap-2">
-            <label htmlFor="new-password">Password baru</label>
-            <input
-              id="new-password"
-              name="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              autoComplete="new-password"
-              placeholder="Minimal 8 karakter"
-              disabled={isChangingPassword}
-            />
-          </div>
+        <section
+          className="settings-card settings-card--security"
+          aria-labelledby="change-password-title"
+        >
+          <header className="settings-card__header">
+            <div>
+              <span className="settings-card__label">security</span>
+              <h2 id="change-password-title">Ubah password.</h2>
+              <p>Gunakan minimal 8 karakter, huruf besar, kecil, dan angka.</p>
+            </div>
+          </header>
 
-          <div className="grid gap-2">
-            <label htmlFor="confirm-password">Konfirmasi password baru</label>
-            <input
-              id="confirm-password"
-              name="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              autoComplete="new-password"
-              placeholder="Ulangi password baru"
-              disabled={isChangingPassword}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isChangingPassword}
-            className="settings-form__submit"
+          <form
+            onSubmit={handleChangePassword}
+            className="settings-form"
+            noValidate
           >
-            {isChangingPassword ? "Mengubah..." : "Simpan perubahan"}
-          </button>
-        </form>
-      </section>
+            {passwordSuccess ? (
+              <p role="status" className="settings-form__success">
+                {passwordSuccess}
+              </p>
+            ) : null}
+
+            {passwordError ? (
+              <p role="alert" className="settings-form__error">
+                {passwordError}
+              </p>
+            ) : null}
+
+            <label className="settings-field" htmlFor="old-password">
+              <span>Password lama</span>
+              <input
+                id="old-password"
+                name="oldPassword"
+                type="password"
+                value={oldPassword}
+                onChange={(event) => setOldPassword(event.target.value)}
+                autoComplete="current-password"
+                placeholder="Password saat ini"
+                disabled={isChangingPassword}
+              />
+            </label>
+
+            <label className="settings-field" htmlFor="new-password">
+              <span>Password baru</span>
+              <input
+                id="new-password"
+                name="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                autoComplete="new-password"
+                placeholder="Minimal 8 karakter"
+                disabled={isChangingPassword}
+              />
+            </label>
+
+            <label className="settings-field" htmlFor="confirm-password">
+              <span>Konfirmasi password</span>
+              <input
+                id="confirm-password"
+                name="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+                placeholder="Ulangi password baru"
+                disabled={isChangingPassword}
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={isChangingPassword}
+              className="settings-form__submit"
+            >
+              {isChangingPassword ? "Mengubah..." : "Simpan password"}
+            </button>
+          </form>
+        </section>
+      </div>
     </section>
   );
 }
