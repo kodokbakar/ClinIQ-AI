@@ -81,7 +81,10 @@ export type PaginatedResult<T> = {
   metadata?: PaginationMetadata;
 };
 
-const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(
+  /\/$/,
+  "",
+);
 
 const API_BASE_URL =
   configuredApiBaseUrl ??
@@ -201,4 +204,43 @@ export function isEmptyQuiz(
   quiz: QuizAttempt | EmptyQuiz | null,
 ): quiz is EmptyQuiz {
   return Boolean(quiz && "is_empty" in quiz && quiz.is_empty);
+}
+
+export type QuizAttemptDetail = {
+  id: string;
+  vignette_id: string;
+  variant_name: string;
+  clues_revealed: number;
+  is_correct: boolean;
+  score: number | null;
+  attempt_date?: string | null;
+  submitted_diagnosis?: string | null;
+  disease: {
+    id: string;
+    name: string;
+    icd_code: string;
+    description?: string | null;
+  };
+  clues: Array<{
+    clue_number: number;
+    content: string;
+    type: string | null;
+  }>;
+  explanation: AIExplanation | null;
+};
+
+export async function getAttemptDetail(
+  attemptId: string,
+  signal?: AbortSignal,
+): Promise<QuizAttemptDetail> {
+  const result = await requestApi<QuizAttemptDetail>(
+    `/api/v1/quiz/attempts/${encodeURIComponent(attemptId)}`,
+    { signal },
+  );
+
+  if (!result.data) {
+    throw new Error(result.message || "Detail riwayat tidak tersedia.");
+  }
+
+  return result.data;
 }

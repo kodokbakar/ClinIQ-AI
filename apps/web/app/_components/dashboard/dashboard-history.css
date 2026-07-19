@@ -61,6 +61,33 @@
   border-radius: 0.8rem;
   background: rgba(255, 249, 238, 0.56);
   padding: 0.7rem 0.85rem;
+  width: 100%;
+  cursor: pointer;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms var(--auth-ease-snap);
+}
+
+.attempt-row:hover:not(:disabled),
+.attempt-row:focus-visible:not(:disabled) {
+  border-color: rgba(27, 60, 255, 0.4);
+  background: rgba(255, 249, 238, 0.92);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+.attempt-row:focus-visible:not(:disabled) {
+  box-shadow: 0 0 0 3px rgba(27, 60, 255, 0.16);
+}
+
+.attempt-row:disabled {
+  cursor: default;
+  opacity: 0.72;
 }
 
 .attempt-row > div {
@@ -157,6 +184,171 @@
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.history-modal-backdrop {
+  background: rgba(31, 36, 33, 0.58);
+  backdrop-filter: blur(10px);
+}
+
+.history-modal {
+  max-height: calc(100svh - 2rem);
+  overflow-y: auto;
+  border: 1px solid var(--auth-line);
+  border-radius: var(--auth-radius-soft);
+  background: var(--auth-paper);
+  box-shadow: 0 2rem 7rem rgba(31, 36, 33, 0.24);
+  color: var(--auth-ink);
+  padding: clamp(1rem, 3vw, 1.6rem);
+  animation: auth-rise 240ms var(--auth-ease-out) both;
+}
+
+.history-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.history-modal__header h2 {
+  margin: 0;
+  font-family: var(--font-display), serif;
+  font-size: clamp(2.3rem, 6vw, 4.2rem);
+  font-weight: 900;
+  line-height: 0.84;
+  letter-spacing: -0.08em;
+}
+
+.history-modal__header > div > p:last-child {
+  margin: 0.6rem 0 0;
+  color: var(--auth-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.history-modal__close {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.6rem;
+  aspect-ratio: 1;
+  place-items: center;
+  cursor: pointer;
+  border: 1px solid var(--auth-line);
+  border-radius: 999px;
+  background: var(--auth-cream);
+  color: var(--auth-ink);
+  font-size: 1.5rem;
+}
+
+.history-modal__content {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.history-modal__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.history-modal__summary > div,
+.history-modal__clues li,
+.history-modal__explanation-card {
+  border: 1px solid var(--auth-line);
+  border-radius: 0.85rem;
+  background: rgba(255, 249, 238, 0.62);
+  padding: 0.75rem;
+}
+
+.history-modal__summary dt,
+.history-modal__clues span,
+.history-modal__explanation-card > span {
+  color: var(--auth-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.history-modal__summary dd {
+  margin: 0.3rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.history-modal__section h3 {
+  margin: 0;
+  font-family: var(--font-display), serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+}
+
+.history-modal__section > p,
+.history-modal__explanation-card p,
+.history-modal__explanation-card ul,
+.history-modal__clues p {
+  margin: 0.55rem 0 0;
+  color: var(--auth-ink-soft);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.history-modal__clues {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-modal__explanation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+}
+
+.history-modal__explanation-card ul {
+  padding-left: 1rem;
+}
+
+.history-modal__state,
+.history-modal__empty,
+.history-modal__error {
+  margin: 1rem 0 0;
+  border-radius: 0.8rem;
+  padding: 0.8rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.history-modal__state,
+.history-modal__empty {
+  background: rgba(15, 95, 92, 0.08);
+  color: var(--auth-teal-dark);
+}
+
+.history-modal__error {
+  background: rgba(241, 90, 36, 0.1);
+  color: var(--auth-orange-dark);
+}
+
+.history-modal__close:focus-visible {
+  outline: 3px solid rgba(27, 60, 255, 0.5);
+  outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .history-modal__summary,
+  .history-modal__explanation {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
