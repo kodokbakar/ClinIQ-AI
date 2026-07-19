@@ -175,6 +175,55 @@ describe("Dashboard page", () => {
           );
         }
 
+        if (String(input).includes("/api/v1/quiz/attempts/attempt-1")) {
+          return Promise.resolve(
+            mockApiResponse({
+              success: true,
+              message: "success",
+              data: {
+                id: "attempt-1",
+                vignette_id: "vignette-1",
+                variant_name: "classic-dengue",
+                clues_revealed: 2,
+                is_correct: true,
+                score: 400,
+                attempt_date: "2026-07-10",
+                submitted_diagnosis: "Dengue Fever",
+                disease: {
+                  id: "disease-1",
+                  name: "Dengue Fever",
+                  icd_code: "1D2Z",
+                  description:
+                    "Infeksi virus dengue yang ditularkan nyamuk Aedes.",
+                },
+                clues: [
+                  {
+                    clue_number: 1,
+                    content: "Demam tinggi mendadak.",
+                    type: "history",
+                  },
+                  {
+                    clue_number: 2,
+                    content: "Trombosit menurun.",
+                    type: "laboratory",
+                  },
+                ],
+                explanation: {
+                  disease_id: "disease-1",
+                  locale: "id",
+                  overview: "Dengue adalah infeksi virus akut.",
+                  pathophysiology: "Virus memicu respons inflamasi sistemik.",
+                  clinical_features: ["Demam", "Nyeri otot"],
+                  diagnosis: ["NS1", "Serologi"],
+                  management: ["Terapi cairan"],
+                  prevention: ["Kontrol vektor"],
+                  key_points: ["Pantau hematokrit"],
+                },
+              },
+            }),
+          );
+        }
+
         if (String(input).includes("/api/v1/leaderboards/group/group-1")) {
           return Promise.resolve(
             mockApiResponse({
@@ -469,5 +518,49 @@ describe("Dashboard page", () => {
 
     expect(screen.getByText("900")).toBeTruthy();
     expect(screen.getByText("Kamu")).toBeTruthy();
+  });
+
+  it("opens completed history detail modal", async () => {
+    render(<DashboardPage />);
+
+    const detailButton = await screen.findByRole("button", {
+      name: "Lihat detail Dengue Fever",
+    });
+
+    fireEvent.click(detailButton);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Dengue Fever",
+    });
+
+    expect(
+      within(dialog).getByText(
+        "Infeksi virus dengue yang ditularkan nyamuk Aedes.",
+      ),
+    ).toBeTruthy();
+
+    expect(within(dialog).getByText("Demam tinggi mendadak.")).toBeTruthy();
+
+    expect(
+      within(dialog).getByText("Dengue adalah infeksi virus akut."),
+    ).toBeTruthy();
+
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) =>
+          String(url).includes("/api/v1/quiz/attempts/attempt-1"),
+        ),
+    ).toBe(true);
+
+    fireEvent.keyDown(document, {
+      key: "Escape",
+    });
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "Dengue Fever",
+      }),
+    ).toBeNull();
   });
 });
