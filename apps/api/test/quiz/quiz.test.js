@@ -9,7 +9,6 @@ const { Op } = require('sequelize')
 const app = require('../../index')
 const db = require('../../db/models')
 const bcrypt = require('../../src/utils/bcrypt')
-const redis = require('../../config/redis')
 
 const TEST_PASSWORD = 'Password123'
 const TEST_EMAILS = [
@@ -146,10 +145,6 @@ async function attemptAllVignettesExcept(user, excludedVignetteIds = []) {
    )
 }
 
-async function clearLeaderboards() {
-   await redis.del('global_leaderboard')
-}
-
 async function cleanupQuizData() {
    const usersToDelete = await db.user.findAll({
       attributes: ['id'],
@@ -232,7 +227,6 @@ async function cleanupQuizData() {
       force: true
    })
 
-   await clearLeaderboards()
 }
 
 async function authGet(path, user = users.primary) {
@@ -250,7 +244,6 @@ async function authPost(path, body, user = users.primary) {
 describe('quiz API', () => {
    beforeAll(async () => {
       await db.sequelize.authenticate()
-      await redis.ping()
       await ensureUserRole()
    })
 
@@ -431,11 +424,20 @@ describe('quiz API', () => {
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
       expect(response.body.data.is_correct).toBe(true)
-      expect(response.body.data.correct_disease).toBe(quizData.first.disease.name)
+      expect(response.body.data.correct_disease).toEqual({
+         name: quizData.first.disease.name,
+         icd_code: quizData.first.disease.icd_code
+      })
    })
 
    it('submit diagnosis marks wrong answer as false', async () => {
-      const attempt = await createAttempt(users.primary, quizData.first.vignette)
+      const attempt = await createAttempt(
+         users.primary,
+         quizData.first.vignette,
+         {
+            clues_revealed: 5
+         }
+      )
 
       const response = await authPost('/api/v1/quiz/submit-diagnosis', {
          attempt_id: attempt.id,
@@ -464,46 +466,26 @@ describe('quiz API', () => {
       expect(response.body.data.clues_revealed).toBe(2)
    })
 
-   it('submit diagnosis updates global leaderboard when correct', async () => {
-      await clearLeaderboards()
-
-      const attempt = await createAttempt(users.primary, quizData.first.vignette, {
-         clues_revealed: 1
-      })
+   it('submit diagnosis persists score for leaderboard aggregation', async () => {
+      const attempt = await createAttempt(
+         users.primary,
+         quizData.first.vignette,
+         {
+            clues_revealed: 1
+         }
+      )
 
       const response = await authPost('/api/v1/quiz/submit-diagnosis', {
          attempt_id: attempt.id,
          diagnosis: quizData.first.disease.name
       })
 
-      const leaderboardScore = await redis.zscore(
-         'global_leaderboard',
-         users.primary.id
-      )
+      const savedAttempt = await db.QuizAttempt.findByPk(attempt.id)
 
       expect(response.status).toBe(200)
       expect(response.body.data.score).toBe(500)
-      expect(Number(leaderboardScore)).toBe(500)
-   })
-
-   it('submit diagnosis does not update leaderboard when wrong', async () => {
-      await clearLeaderboards()
-
-      const attempt = await createAttempt(users.primary, quizData.first.vignette)
-
-      const response = await authPost('/api/v1/quiz/submit-diagnosis', {
-         attempt_id: attempt.id,
-         diagnosis: 'Wrong Disease'
-      })
-
-      const leaderboardScore = await redis.zscore(
-         'global_leaderboard',
-         users.primary.id
-      )
-
-      expect(response.status).toBe(200)
-      expect(response.body.data.is_correct).toBe(false)
-      expect(leaderboardScore).toBeNull()
+      expect(savedAttempt.score).toBe(500)
+      expect(savedAttempt.is_correct).toBe(true)
    })
 
    it('my attempts returns only current user attempts', async () => {

@@ -276,7 +276,7 @@ describe('security regression', () => {
       const response = await request(app)
          .get('/api/v1/diseases/search')
          .query({
-            q: 'security%\\' OR 1=1 --'
+            q: 'security%\' OR 1=1 --'
          })
 
       expect(response.status).toBe(200)

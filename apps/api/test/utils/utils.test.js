@@ -2,6 +2,10 @@ process.env.NODE_ENV = 'local'
 process.env.JWT_KEY = process.env.JWT_KEY || 'test-secret'
 
 const { z } = require('zod')
+const {
+   safeParseJSON,
+   tryParseJSON
+} = require('../../src/utils/safe-json')
 
 const {
    api,
@@ -16,6 +20,78 @@ const JWT = require('../../src/utils/jwt')
 const { MAX_CLUES, scoreForClues } = require('../../src/utils/quiz')
 
 describe('utility helpers', () => {
+   it('tryParseJSON returns parsed JSON', () => {
+      expect(
+         tryParseJSON('{"name":"Dengue"}')
+      ).toEqual({
+         success: true,
+         data: {
+            name: 'Dengue'
+         }
+      })
+   })
+
+   it('tryParseJSON returns failure for invalid JSON', () => {
+      expect(
+         tryParseJSON('not-json')
+      ).toEqual({
+         success: false,
+         data: null
+      })
+   })
+
+   it('safeParseJSON removes markdown fences', () => {
+      const result = safeParseJSON(`
+      \`\`\`json
+      {
+         "name": "Dengue"
+      }
+      \`\`\`
+   `)
+
+      expect(result).toEqual({
+         name: 'Dengue'
+      })
+   })
+
+   it('safeParseJSON removes trailing commas', () => {
+      const result = safeParseJSON(`
+      {
+         "name": "Dengue",
+         "clues": ["Demam", "Petekie",],
+      }
+   `)
+
+      expect(result).toEqual({
+         name: 'Dengue',
+         clues: ['Demam', 'Petekie']
+      })
+   })
+
+   it('safeParseJSON repairs missing closing braces', () => {
+      const result = safeParseJSON(`
+      {
+         "name": "Dengue",
+         "metadata": {
+            "locale": "id"
+   `)
+
+      expect(result).toEqual({
+         name: 'Dengue',
+         metadata: {
+            locale: 'id'
+         }
+      })
+   })
+
+   it('safeParseJSON rejects unrecoverable content', () => {
+      expect(() =>
+         safeParseJSON('not-json')
+      ).toThrow(
+         'Failed to parse AI response as JSON'
+      )
+   })
+
    it('api formats successful created response', () => {
       const response = api({ id: 'created-id' }, 201)
 
