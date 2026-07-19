@@ -503,7 +503,7 @@ export function LandingPage() {
         </div>
 
         <div className="landing-stack__cards">
-          {reviewCards.map((card, index) => (
+          {reviewCards.map((card) => (
             <article
               key={card.key}
               className={`landing-stack__card landing-stack__card--${card.key}`}
